@@ -4,9 +4,20 @@ from chess_game import ChessGame, Color
 from checkers_game import CheckersGame, CheckerColor
 import uuid
 import json
+import os
+import threading
+import logging
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chess_secret_key_2024'
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'chess_secret_key_2024')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Хранилище активных игр
@@ -251,5 +262,28 @@ def get_board_state(game, game_type):
         board_state.append(board_row)
     return board_state
 
+def start_telegram_bot():
+    """Запуск Telegram бота в отдельном потоке"""
+    try:
+        from telegram_bot import TelegramGameBot
+        bot = TelegramGameBot()
+        bot.run()
+    except Exception as e:
+        logger.error(f"Ошибка запуска Telegram бота: {e}")
+
+# Запускаем Telegram бота в отдельном потоке при импорте
+bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+if bot_token and bot_token != 'YOUR_BOT_TOKEN_HERE':
+    bot_thread = threading.Thread(target=start_telegram_bot, daemon=True)
+    bot_thread.start()
+    logger.info("Telegram бот запущен в отдельном потоке")
+else:
+    logger.warning("TELEGRAM_BOT_TOKEN не установлен, бот не запущен")
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000) 
+    port = int(os.getenv('PORT', 5000))
+    host = os.getenv('HOST', '0.0.0.0')
+    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    logger.info(f"Запуск приложения на {host}:{port}")
+    socketio.run(app, debug=debug, host=host, port=port, allow_unsafe_werkzeug=True) 

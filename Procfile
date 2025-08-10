@@ -1,1 +1,1 @@
-web: python telegram_bot.py 
+web: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 app:app 
