@@ -16,12 +16,12 @@
   ],
   "routes": [
     {
-      "src": "/api/test-bot",
-      "dest": "api/test-bot.py"
+      "src": "/api/test-bot/(.*)",
+      "dest": "/api/test-bot.py"
     },
     {
-      "src": "/api/webhook",
-      "dest": "api/webhook.py"
+      "src": "/api/webhook/(.*)",
+      "dest": "/api/webhook.py"
     },
     {
       "src": "/static/(.*)",
@@ -29,7 +29,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "app.py"
+      "dest": "/app.py"
     }
   ],
   "env": {
