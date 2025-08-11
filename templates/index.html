@@ -346,7 +346,10 @@
             <div class="lobby-section">
                 <div class="lobby-header">
                     <h2 class="lobby-title">🎯 Доступные игры</h2>
-                    <button class="refresh-btn" onclick="refreshLobby()">🔄 Обновить</button>
+                    <div>
+                        <button class="refresh-btn" onclick="refreshLobby()">🔄 Обновить</button>
+                        <button class="refresh-btn" onclick="checkMyGame()" style="margin-left: 10px;">🎮 Моя игра</button>
+                    </div>
                 </div>
                 <div id="gamesList" class="games-list">
                     <div class="status">
@@ -453,8 +456,10 @@
             console.log('Telegram WebApp not available, using fallback');
             tg = {
                 showAlert: (message) => alert(message),
+                showPopup: (message) => alert(message), // Fallback для showPopup
                 expand: () => {},
-                ready: () => {}
+                ready: () => {},
+                initDataUnsafe: { user: null }
             };
         }
 
@@ -655,14 +660,8 @@
             }, 2000);
         }
 
-        // Автообновление лобби каждые 10 секунд
-        setInterval(refreshLobby, 10000);
-        
-        // Проверяем статус текущей игры каждые 5 секунд
-        setInterval(checkCurrentGameStatus, 5000);
-        
-        // Функция проверки статуса текущей игры
-        async function checkCurrentGameStatus() {
+        // Функция проверки игры пользователя
+        async function checkMyGame() {
             // Получаем данные пользователя
             const user = tg?.initDataUnsafe?.user || {
                 id: Math.floor(Math.random() * 1000000),
@@ -670,20 +669,33 @@
             };
             
             try {
-                // Проверяем, есть ли у пользователя активная игра
                 const response = await fetch(`${API_BASE}/user/${user.id}`);
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.status === 'ok' && data.game && data.game.status === 'playing') {
-                        // Игра началась, переходим к ней
-                        tg.showAlert('Игра начинается! Противник присоединился!');
-                        window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
+                    if (data.status === 'ok' && data.game) {
+                        if (data.game.status === 'playing') {
+                            tg.showAlert('Игра началась! Переходим к игре...');
+                            window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
+                        } else {
+                            tg.showAlert(`Ваша игра: ${data.game.status}. Игроков: ${data.game.players.length}/${data.game.max_players}`);
+                        }
+                    } else {
+                        tg.showAlert('У вас нет активной игры');
                     }
+                } else {
+                    tg.showAlert('У вас нет активной игры');
                 }
             } catch (error) {
-                // Игнорируем ошибки, если у пользователя нет активной игры
+                console.error('Error checking game:', error);
+                tg.showAlert('Ошибка при проверке игры');
             }
         }
+
+        // Автообновление лобби каждые 10 секунд
+        setInterval(refreshLobby, 10000);
+        
+        // Убираем автоматическую проверку статуса игры, так как она вызывает ошибки
+        // Вместо этого полагаемся на ручное обновление лобби
     </script>
 </body>
 </html> 
