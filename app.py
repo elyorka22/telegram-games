@@ -59,6 +59,24 @@ def api_status():
         'platform': 'vercel'
     })
 
+@app.route('/api/health')
+def api_health():
+    """API health check"""
+    return jsonify({
+        'status': 'healthy',
+        'message': 'API is running on Vercel',
+        'platform': 'vercel'
+    }), 200
+
+@app.route('/api/test')
+def api_test():
+    """API test endpoint"""
+    return jsonify({
+        'message': 'API test endpoint working on Vercel!',
+        'status': 'ok',
+        'platform': 'vercel'
+    }), 200
+
 @app.route('/static/<path:filename>')
 def static_files(filename):
     """Обработка статических файлов"""
