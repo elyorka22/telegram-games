@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Демо - Шахматная игра</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .game-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .game-info h1 {
+            color: #2d3436;
+            margin-bottom: 10px;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-radius: 25px;
+            background: rgba(116, 185, 255, 0.1);
+        }
+
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .player-color.white {
+            background: #f0d9b5;
+        }
+
+        .player-color.black {
+            background: #b58863;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .player-status {
+            font-size: 0.9rem;
+            color: #636e72;
+        }
+
+        .vs {
+            font-weight: bold;
+            color: #2d3436;
+            font-size: 1.2rem;
+        }
+
+        .game-main {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 30px;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .game-board {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 480px;
+            height: 480px;
+            border: 3px solid #2d3436;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .chess-square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .chess-square.white {
+            background-color: #f0d9b5;
+        }
+
+        .chess-square.black {
+            background-color: #b58863;
+        }
+
+        .chess-square:hover {
+            transform: scale(1.05);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .chess-square.selected {
+            background-color: #ffd700 !important;
+            box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .chess-square.valid-move {
+            background-color: #90EE90 !important;
+            box-shadow: inset 0 0 10px rgba(144, 238, 144, 0.5);
+        }
+
+        .chess-piece {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+
+        .chess-piece:hover {
+            transform: scale(1.1);
+        }
+
+        .chess-piece.white {
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .chess-piece.black {
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .game-sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            width: 300px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .game-sidebar h3 {
+            color: #2d3436;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #74b9ff;
+            padding-bottom: 5px;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .history-item {
+            padding: 8px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .game-main {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .chess-board {
+                width: 320px;
+                height: 320px;
+            }
+            
+            .chess-square {
+                width: 40px;
+                height: 40px;
+                font-size: 1.8rem;
+            }
+            
+            .chess-piece {
+                font-size: 1.8rem;
+            }
+            
+            .game-sidebar {
+                width: 100%;
+                max-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-info">
+                <h1>♔ Шахматы ♛</h1>
+                <p id="gameStatus">Игра началась (локальный режим)</p>
+            </div>
+            
+            <div class="player-info">
+                <div class="player">
+                    <div class="player-color white"></div>
+                    <div class="player-name">Белые</div>
+                    <div class="player-status" id="whiteStatus">Вы</div>
+                </div>
+                
+                <div class="vs">VS</div>
+                
+                <div class="player">
+                    <div class="player-color black"></div>
+                    <div class="player-name">Черные</div>
+                    <div class="player-status" id="blackStatus">Противник</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-main">
+            <div class="game-board">
+                <div id="chessBoard" class="chess-board"></div>
+            </div>
+            
+            <div class="game-sidebar">
+                <div class="game-controls">
+                    <h3>История ходов</h3>
+                    <div class="history-list" id="moveHistory">
+                        <div class="history-item">Игра началась</div>
+                    </div>
+                </div>
+                
+                <div class="game-actions">
+                    <button id="newGameBtn" class="btn btn-primary">Новая игра</button>
+                    <button id="backToMenuBtn" class="btn btn-secondary">В меню</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let board = [];
+        let selectedSquare = null;
+        let moveHistory = [];
+
+        // Создание начальной расстановки шахмат
+        function createInitialChessBoard() {
+            const board = Array(8).fill(null).map(() => Array(8).fill(null));
+            
+            // Расставляем пешки
+            for (let col = 0; col < 8; col++) {
+                board[1][col] = { color: 'black', type: 'pawn', symbol: '♙' };
+                board[6][col] = { color: 'white', type: 'pawn', symbol: '♟️' };
+            }
+            
+            // Расставляем остальные фигуры
+            const pieces = [
+                { type: 'rook', symbol: '♖', whiteSymbol: '♜' },
+                { type: 'knight', symbol: '♘', whiteSymbol: '♞' },
+                { type: 'bishop', symbol: '♗', whiteSymbol: '♝' },
+                { type: 'queen', symbol: '♕', whiteSymbol: '♛' },
+                { type: 'king', symbol: '♔', whiteSymbol: '♚' },
+                { type: 'bishop', symbol: '♗', whiteSymbol: '♝' },
+                { type: 'knight', symbol: '♘', whiteSymbol: '♞' },
+                { type: 'rook', symbol: '♖', whiteSymbol: '♜' }
+            ];
+            
+            for (let col = 0; col < 8; col++) {
+                const piece = pieces[col];
+                board[0][col] = { color: 'black', type: piece.type, symbol: piece.symbol };
+                board[7][col] = { color: 'white', type: piece.type, symbol: piece.whiteSymbol };
+            }
+            
+            return board;
+        }
+
+        // Создание игровой доски
+        function createGameBoard() {
+            const gameBoard = document.getElementById('chessBoard');
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `chess-square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    square.addEventListener('click', function() {
+                        handleSquareClick(row, col);
+                    });
+                    
+                    gameBoard.appendChild(square);
+                }
+            }
+        }
+
+        // Обработка клика по клетке
+        function handleSquareClick(row, col) {
+            const square = getSquare(row, col);
+            const piece = board[row][col];
+            
+            if (selectedSquare) {
+                // Если уже выбрана клетка, пытаемся сделать ход
+                const fromRow = parseInt(selectedSquare.dataset.row);
+                const fromCol = parseInt(selectedSquare.dataset.col);
+                
+                if (fromRow === row && fromCol === col) {
+                    // Кликнули на ту же клетку - отменяем выбор
+                    clearSelection();
+                } else {
+                    // Пытаемся сделать ход
+                    if (makeMove(fromRow, fromCol, row, col)) {
+                        console.log('Ход выполнен:', fromRow, fromCol, '->', row, col);
+                    }
+                }
+            } else {
+                // Выбираем клетку
+                if (piece && piece.color === 'white') {
+                    selectSquare(row, col);
+                }
+            }
+        }
+
+        // Выбор клетки
+        function selectSquare(row, col) {
+            clearSelection();
+            selectedSquare = getSquare(row, col);
+            selectedSquare.classList.add('selected');
+        }
+
+        // Очистка выбора
+        function clearSelection() {
+            if (selectedSquare) {
+                selectedSquare.classList.remove('selected');
+                selectedSquare = null;
+            }
+        }
+
+        // Выполнение хода
+        function makeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            if (!piece || piece.color !== 'white') {
+                return false;
+            }
+            
+            // Простая проверка хода
+            if (isValidMove(piece, fromRow, fromCol, toRow, toCol)) {
+                // Выполняем ход
+                board[toRow][toCol] = piece;
+                board[fromRow][fromCol] = null;
+                updateBoard(board);
+                
+                // Добавляем ход в историю
+                addMoveToHistory({
+                    from_pos: [fromRow, fromCol],
+                    to_pos: [toRow, toCol],
+                    piece: piece
+                });
+                
+                clearSelection();
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Простая проверка валидности хода
+        function isValidMove(piece, fromRow, fromCol, toRow, toCol) {
+            // Базовая проверка - фигура не может ходить на клетку с фигурой того же цвета
+            const targetPiece = board[toRow][toCol];
+            if (targetPiece && targetPiece.color === piece.color) {
+                return false;
+            }
+            
+            // Простые правила для пешки
+            if (piece.type === 'pawn') {
+                if (piece.color === 'white') {
+                    // Белая пешка ходит вперед
+                    if (fromCol === toCol && toRow === fromRow - 1 && !targetPiece) {
+                        return true;
+                    }
+                    // Первый ход пешки может быть на 2 клетки
+                    if (fromRow === 6 && fromCol === toCol && toRow === 4 && !targetPiece && !board[5][fromCol]) {
+                        return true;
+                    }
+                    // Взятие по диагонали
+                    if (Math.abs(fromCol - toCol) === 1 && toRow === fromRow - 1 && targetPiece) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Для других фигур пока разрешаем любые ходы
+            return true;
+        }
+
+        // Обновление доски
+        function updateBoard(boardData) {
+            board = boardData;
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = getSquare(row, col);
+                    const piece = boardData[row][col];
+                    
+                    // Очищаем клетку
+                    square.innerHTML = '';
+                    square.className = `chess-square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                    
+                    // Добавляем фигуру, если есть
+                    if (piece) {
+                        const pieceElement = document.createElement('div');
+                        pieceElement.className = `chess-piece ${piece.color}`;
+                        pieceElement.textContent = piece.symbol;
+                        pieceElement.title = `${piece.color} ${piece.type}`;
+                        square.appendChild(pieceElement);
+                    }
+                }
+            }
+        }
+
+        // Получение элемента клетки
+        function getSquare(row, col) {
+            return document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        }
+
+        // Добавление хода в историю
+        function addMoveToHistory(data) {
+            const historyElement = document.getElementById('moveHistory');
+            if (historyElement) {
+                const moveItem = document.createElement('div');
+                moveItem.className = 'history-item';
+                
+                const fromPos = data.from_pos;
+                const toPos = data.to_pos;
+                const moveNumber = Math.floor(moveHistory.length / 2) + 1;
+                
+                if (moveHistory.length % 2 === 0) {
+                    // Ход белых
+                    moveItem.textContent = `${moveNumber}. ${getPositionNotation(fromPos)}-${getPositionNotation(toPos)}`;
+                } else {
+                    // Ход черных
+                    const lastItem = historyElement.lastElementChild;
+                    if (lastItem) {
+                        lastItem.textContent += ` ${getPositionNotation(fromPos)}-${getPositionNotation(toPos)}`;
+                    }
+                }
+                
+                if (moveHistory.length % 2 === 0) {
+                    historyElement.appendChild(moveItem);
+                }
+                
+                moveHistory.push(data);
+                
+                // Прокручиваем к последнему ходу
+                historyElement.scrollTop = historyElement.scrollHeight;
+            }
+        }
+
+        // Получение нотации позиции
+        function getPositionNotation(pos) {
+            const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+            const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+            return files[pos[1]] + ranks[pos[0]];
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            createGameBoard();
+            const initialBoard = createInitialChessBoard();
+            updateBoard(initialBoard);
+            
+            // Обработчики кнопок
+            document.getElementById('newGameBtn').addEventListener('click', function() {
+                location.reload();
+            });
+            
+            document.getElementById('backToMenuBtn').addEventListener('click', function() {
+                window.location.href = '/';
+            });
+        });
+    </script>
+</body>
+</html> 

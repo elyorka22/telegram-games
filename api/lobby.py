@@ -33,6 +33,9 @@ class LobbyManager:
     def create_game(self, user_id, username, game_type):
         """Создать новую игру"""
         game_id = str(uuid.uuid4())[:8]
+        # Приводим user_id к строке для корректного сравнения
+        user_id = str(user_id)
+        
         game_info = {
             'id': game_id,
             'type': game_type,
@@ -60,6 +63,9 @@ class LobbyManager:
     
     def join_game(self, user_id, username, game_id):
         """Присоединиться к игре"""
+        # Приводим user_id к строке для корректного сравнения
+        user_id = str(user_id)
+        
         if game_id not in self.games:
             return None, "Игра не найдена"
         
@@ -73,7 +79,7 @@ class LobbyManager:
         
         # Проверяем, не в игре ли уже пользователь
         for player in game['players']:
-            if player['id'] == user_id:
+            if str(player['id']) == user_id:
                 return game, "Вы уже в этой игре"
         
         # Добавляем игрока
@@ -117,13 +123,16 @@ class LobbyManager:
     
     def leave_game(self, user_id, game_id):
         """Покинуть игру"""
+        # Приводим user_id к строке для корректного сравнения
+        user_id = str(user_id)
+        
         if game_id not in self.games:
             return False, "Игра не найдена"
         
         game = self.games[game_id]
         
         # Удаляем игрока из игры
-        game['players'] = [p for p in game['players'] if p['id'] != user_id]
+        game['players'] = [p for p in game['players'] if str(p['id']) != user_id]
         
         # Если игра пустая, удаляем её
         if len(game['players']) == 0:
@@ -195,10 +204,18 @@ def create_game():
         username = data.get('username')
         game_type = data.get('game_type', 'chess')
         
+        print(f"DEBUG: Создание игры - user_id: {user_id}, username: {username}, game_type: {game_type}")
+        
         if not user_id or not username:
+            print(f"DEBUG: Ошибка - отсутствуют user_id или username")
             return jsonify({'error': 'user_id и username обязательны'}), 400
         
+        # Приводим user_id к строке
+        user_id = str(user_id)
+        
         game_info = lobby_manager.create_game(user_id, username, game_type)
+        
+        print(f"DEBUG: Игра создана успешно - game_id: {game_info['id']}")
         
         return jsonify({
             'status': 'ok',
@@ -206,6 +223,7 @@ def create_game():
             'game': game_info
         })
     except Exception as e:
+        print(f"DEBUG: Ошибка при создании игры: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/lobby/join', methods=['POST'])
@@ -219,6 +237,9 @@ def join_game():
         
         if not user_id or not username or not game_id:
             return jsonify({'error': 'user_id, username и game_id обязательны'}), 400
+        
+        # Приводим user_id к строке
+        user_id = str(user_id)
         
         game_info, message = lobby_manager.join_game(user_id, username, game_id)
         
@@ -253,6 +274,9 @@ def get_game_info(game_id):
 def get_user_game(user_id):
     """Получить информацию об игре пользователя"""
     try:
+        # Приводим user_id к строке
+        user_id = str(user_id)
+        
         user_info = lobby_manager.users.get(user_id)
         
         if not user_info or not user_info.get('current_game'):
@@ -281,6 +305,9 @@ def leave_game():
         
         if not user_id or not game_id:
             return jsonify({'error': 'user_id и game_id обязательны'}), 400
+        
+        # Приводим user_id к строке
+        user_id = str(user_id)
         
         success, message = lobby_manager.leave_game(user_id, game_id)
         
