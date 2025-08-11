@@ -156,7 +156,8 @@ def api_root():
             '/api/test-bot',
             '/api/webhook',
             '/api/webhook/setup',
-            '/api/webhook/status'
+            '/api/webhook/status',
+            '/api/test-message'
         ]
     })
 
@@ -205,6 +206,21 @@ def test_bot():
         }
     })
 
+@app.route('/api/test-message', methods=['POST'])
+def test_message():
+    """Тестовый endpoint для проверки получения сообщений"""
+    try:
+        data = request.get_json()
+        logger.info(f"Received test message: {data}")
+        return jsonify({
+            'status': 'ok',
+            'message': 'Test message received',
+            'data': data
+        }), 200
+    except Exception as e:
+        logger.error(f"Error processing test message: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/webhook', methods=['GET', 'POST'])
 def webhook():
     """Webhook endpoint для Telegram бота"""
@@ -224,8 +240,12 @@ def webhook():
             return jsonify({'error': 'Bot not configured'}), 400
         
         try:
+            # Логируем входящие данные
+            data = request.get_json()
+            logger.info(f"Received webhook data: {data}")
+            
             # Получаем данные от Telegram
-            update = Update.de_json(request.get_json(), application.bot)
+            update = Update.de_json(data, application.bot)
             
             # Обрабатываем обновление
             application.process_update(update)
