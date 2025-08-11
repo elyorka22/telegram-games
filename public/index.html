@@ -1,11 +1,125 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Telegram Games - Static Files</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Онлайн Игры - Шахматы и Шашки</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Telegram Web App JS -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <h1>Static Files Directory</h1>
-    <p>This directory contains static files for the Telegram Games app.</p>
-    <p>If you see this, the public directory is working correctly.</p>
+    <div class="container">
+        <header class="header">
+            <h1>🎮 Онлайн Игры</h1>
+            <p>Выберите игру и сразитесь с игроками со всего мира в реальном времени</p>
+        </header>
+
+        <main class="main-content">
+            <div class="game-selection">
+                <h2>Выберите игру</h2>
+                
+                <div class="games-grid">
+                    <div class="game-card chess-card">
+                        <div class="game-icon">♔♛</div>
+                        <h3>Шахматы</h3>
+                        <p>Классическая игра стратегии и тактики</p>
+                        <div class="game-features">
+                            <span class="feature">♟️ Полная логика</span>
+                            <span class="feature">⚡ Real-time</span>
+                            <span class="feature">🎯 Шах и мат</span>
+                        </div>
+                        <button id="findChessGameBtn" class="btn btn-primary">
+                            <span class="btn-icon">🎮</span>
+                            Играть в шахматы
+                        </button>
+                    </div>
+                    
+                    <div class="game-card checkers-card">
+                        <div class="game-icon">⚪⚫</div>
+                        <h3>Шашки</h3>
+                        <p>Быстрая и динамичная игра</p>
+                        <div class="game-features">
+                            <span class="feature">⚡ Обязательные взятия</span>
+                            <span class="feature">👑 Дамки</span>
+                            <span class="feature">🎯 Быстрая игра</span>
+                        </div>
+                        <button id="findCheckersGameBtn" class="btn btn-secondary">
+                            <span class="btn-icon">🎯</span>
+                            Играть в шашки
+                        </button>
+                    </div>
+                </div>
+
+                <div id="status" class="status hidden">
+                    <div class="loading-spinner"></div>
+                    <p id="statusText">Поиск противника...</p>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Быстрая игра</h3>
+                    <p>Найдите противника за считанные секунды</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Онлайн режим</h3>
+                    <p>Играйте в реальном времени с WebSocket</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Умная логика</h3>
+                    <p>Полная проверка правил обеих игр</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Telegram Mini App</h3>
+                    <p>Играйте прямо в Telegram</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Модальное окно с правилами -->
+        <div id="rulesModal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Правила игр</h2>
+                <div class="rules-content">
+                    <div class="rules-section">
+                        <h3>♔ Шахматы</h3>
+                        <p><strong>Цель:</strong> Поставить мат королю противника.</p>
+                        <ul>
+                            <li><strong>Пешка (♙):</strong> Ходит на одну клетку вперед, первый ход - на две клетки. Бьет по диагонали.</li>
+                            <li><strong>Ладья (♖):</strong> Ходит по горизонтали и вертикали на любое количество клеток.</li>
+                            <li><strong>Конь (♘):</strong> Ходит буквой "Г" - на две клетки в одном направлении и одну в перпендикулярном.</li>
+                            <li><strong>Слон (♗):</strong> Ходит по диагонали на любое количество клеток.</li>
+                            <li><strong>Ферзь (♕):</strong> Ходит как ладья + слон.</li>
+                            <li><strong>Король (♔):</strong> Ходит на одну клетку в любом направлении.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="rules-section">
+                        <h3>⚪ Шашки</h3>
+                        <p><strong>Цель:</strong> Захватить все шашки противника или заблокировать их.</p>
+                        <ul>
+                            <li><strong>Обычная шашка:</strong> Ходит только вперед по диагонали на одну клетку.</li>
+                            <li><strong>Взятие:</strong> Обязательно, если возможно. Шашка "перепрыгивает" через шашку противника.</li>
+                            <li><strong>Дамка (👑):</strong> При достижении последней горизонтали шашка становится дамкой.</li>
+                            <li><strong>Дамка:</strong> Ходит по диагонали на любое количество клеток.</li>
+                            <li><strong>Множественное взятие:</strong> Если после взятия возможно еще одно - оно обязательно.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html> 
