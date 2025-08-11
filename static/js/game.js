@@ -70,8 +70,8 @@ function initializeTelegramWebApp() {
     } catch (e) {
         console.log('Telegram WebApp not available in game, using fallback');
         telegramWebApp = {
-            showAlert: (message) => alert(message),
-            showPopup: (message) => alert(message),
+            showAlert: (message) => alert(String(message || '')),
+            showPopup: (message) => alert(String(message || '')),
             expand: () => {},
             ready: () => {},
             initDataUnsafe: { user: null }
@@ -246,7 +246,7 @@ function initializeSocket() {
             
             // В Telegram показываем ошибку
             if (isTelegramApp && telegramWebApp.showAlert) {
-                telegramWebApp.showAlert('Ошибка: ' + data.message);
+                telegramWebApp.showAlert('Ошибка: ' + String(data.message || ''));
             }
         });
         
@@ -634,7 +634,7 @@ function showGameOver(winner) {
     
     // В Telegram показываем уведомление
     if (isTelegramApp && telegramWebApp.showAlert) {
-        telegramWebApp.showAlert(message.textContent);
+        telegramWebApp.showAlert(String(message.textContent || ''));
     }
 }
 
@@ -642,10 +642,10 @@ function showGameOver(winner) {
 function showError(message) {
     // В Telegram показываем ошибку
     if (isTelegramApp && telegramWebApp.showAlert) {
-        telegramWebApp.showAlert('Ошибка: ' + message);
+        telegramWebApp.showAlert('Ошибка: ' + String(message || ''));
     } else {
         // Обычное уведомление для браузера
-        alert('Ошибка: ' + message);
+        alert('Ошибка: ' + String(message || ''));
     }
 }
 

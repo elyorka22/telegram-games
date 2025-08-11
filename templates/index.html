@@ -459,8 +459,8 @@
         // Создаем безопасный fallback для всех методов
         if (!tg) {
             tg = {
-                showAlert: (message) => alert(message),
-                showPopup: (message) => alert(message), // Fallback для showPopup
+                showAlert: (message) => alert(String(message || '')),
+                showPopup: (message) => alert(String(message || '')), // Fallback для showPopup
                 expand: () => {},
                 ready: () => {},
                 initDataUnsafe: { user: null }
@@ -470,7 +470,13 @@
             const originalShowPopup = tg.showPopup;
             tg.showPopup = function(message) {
                 console.log('showPopup called, using alert instead');
-                return alert(message); // Используем alert напрямую, а не tg.showAlert
+                return alert(String(message || '')); // Используем alert напрямую, а не tg.showAlert
+            };
+            
+            // Безопасная обертка для showAlert
+            const originalShowAlert = tg.showAlert;
+            tg.showAlert = function(message) {
+                return originalShowAlert.call(this, String(message || ''));
             };
         }
 
@@ -587,7 +593,9 @@
                     statusText.textContent = 'Игра создана! Ожидание противника...';
                     console.log('✅ Игра создана успешно, ID:', data.game.id);
                     
-                    tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${data.game.id}`);
+                    // Безопасное преобразование в строку
+                    const gameId = String(data.game.id || 'неизвестно');
+                    tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${gameId}`);
                     
                     // Показываем уведомление о том, что нужно ждать второго игрока
                     setTimeout(() => {
