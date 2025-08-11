@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 import os
 import logging
+import asyncio
 from dotenv import load_dotenv
 from telegram import Update, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -244,8 +245,12 @@ def setup_webhook():
         # Получаем URL для webhook
         webhook_url = f"{WEBAPP_URL}/api/webhook"
         
+        # Создаем новую event loop для асинхронной операции
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         # Устанавливаем webhook
-        result = application.bot.set_webhook(url=webhook_url)
+        result = loop.run_until_complete(application.bot.set_webhook(url=webhook_url))
         
         return jsonify({
             'status': 'ok',
@@ -263,7 +268,11 @@ def webhook_status():
         return jsonify({'error': 'Bot not configured'}), 400
     
     try:
-        webhook_info = application.bot.get_webhook_info()
+        # Создаем новую event loop для асинхронной операции
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        webhook_info = loop.run_until_complete(application.bot.get_webhook_info())
         return jsonify({
             'status': 'ok',
             'webhook_info': webhook_info.to_dict()
