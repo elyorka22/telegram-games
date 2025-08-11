@@ -6,22 +6,14 @@
       "use": "@vercel/python"
     },
     {
-      "src": "api/webhook.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/test-bot.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/api/test-bot/(.*)",
-      "dest": "/api/test-bot.py"
-    },
-    {
-      "src": "/api/webhook/(.*)",
-      "dest": "/api/webhook.py"
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
       "src": "/static/(.*)",
