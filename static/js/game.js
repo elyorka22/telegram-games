@@ -21,10 +21,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('GAME_MODE:', GAME_MODE);
     
     initializeTelegramWebApp();
-    initializeSocket();
+    // ВАЖНО: сначала создаем DOM доски и слушатели, затем любые сетевые действия
     createGameBoard();
     setupEventListeners();
     setupTelegramUI();
+    // Подключение к сокету/фолбек только после готовности DOM
+    initializeSocket();
     
     console.log('Инициализация завершена');
 });
