@@ -104,8 +104,12 @@ class LobbyManager:
     
     def get_available_games(self):
         """Получить список доступных игр"""
+        print(f"DEBUG: get_available_games - всего игр в системе: {len(self.games)}")
+        
         available = []
         for game_id, game in self.games.items():
+            print(f"DEBUG: Проверяем игру {game_id} - статус: {game['status']}, игроков: {len(game['players'])}/{game['max_players']}")
+            
             if game['status'] == 'waiting' and len(game['players']) < game['max_players']:
                 available.append({
                     'id': game_id,
@@ -115,6 +119,9 @@ class LobbyManager:
                     'max_players': game['max_players'],
                     'created_at': game['created_at']
                 })
+                print(f"DEBUG: Игра {game_id} добавлена в доступные")
+        
+        print(f"DEBUG: Доступных игр: {len(available)}")
         return available
     
     def get_game_info(self, game_id):
@@ -150,16 +157,24 @@ class LobbyManager:
     
     def cleanup_old_games(self):
         """Очистка старых игр"""
+        print(f"DEBUG: cleanup_old_games - начинаем очистку")
         current_time = datetime.now()
         games_to_remove = []
         
         for game_id, game in self.games.items():
             created_time = datetime.fromisoformat(game['created_at'])
-            if (current_time - created_time).seconds > 3600:  # 1 час
+            time_diff = (current_time - created_time).seconds
+            print(f"DEBUG: Игра {game_id} создана {time_diff} секунд назад")
+            
+            if time_diff > 3600:  # 1 час
                 games_to_remove.append(game_id)
+                print(f"DEBUG: Игра {game_id} будет удалена (старше 1 часа)")
         
         for game_id in games_to_remove:
             del self.games[game_id]
+            print(f"DEBUG: Игра {game_id} удалена")
+        
+        print(f"DEBUG: Очистка завершена, осталось игр: {len(self.games)}")
 
 # Создаем менеджер лобби
 lobby_manager = LobbyManager()
@@ -183,16 +198,21 @@ def index():
 def get_games():
     """Получить список доступных игр"""
     try:
+        print(f"DEBUG: Запрос списка игр")
+        
         # Очищаем старые игры
         lobby_manager.cleanup_old_games()
         
         games = lobby_manager.get_available_games()
+        print(f"DEBUG: Найдено игр: {len(games)}")
+        
         return jsonify({
             'status': 'ok',
             'games': games,
             'count': len(games)
         })
     except Exception as e:
+        print(f"DEBUG: Ошибка при получении игр: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/lobby/create', methods=['POST'])
@@ -235,13 +255,18 @@ def join_game():
         username = data.get('username')
         game_id = data.get('game_id')
         
+        print(f"DEBUG: Присоединение к игре - user_id: {user_id}, username: {username}, game_id: {game_id}")
+        
         if not user_id or not username or not game_id:
+            print(f"DEBUG: Ошибка - отсутствуют обязательные параметры")
             return jsonify({'error': 'user_id, username и game_id обязательны'}), 400
         
         # Приводим user_id к строке
         user_id = str(user_id)
         
         game_info, message = lobby_manager.join_game(user_id, username, game_id)
+        
+        print(f"DEBUG: Результат присоединения - game_info: {game_info is not None}, message: {message}")
         
         if game_info is None:
             return jsonify({'error': message}), 400
@@ -252,6 +277,7 @@ def join_game():
             'game': game_info
         })
     except Exception as e:
+        print(f"DEBUG: Ошибка при присоединении к игре: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/lobby/game/<game_id>', methods=['GET'])
