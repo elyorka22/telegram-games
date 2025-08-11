@@ -22,33 +22,53 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTelegramUI();
 });
 
-// Инициализация Telegram Web App
+// Инициализация Telegram WebApp
 function initializeTelegramWebApp() {
     // Проверяем, запущено ли приложение в Telegram
-    if (window.Telegram && window.Telegram.WebApp) {
-        telegramWebApp = window.Telegram.WebApp;
-        isTelegramApp = true;
-        
-        console.log('Telegram Web App инициализирован в игре');
-        
-        // Инициализируем Telegram Web App
-        telegramWebApp.ready();
-        
-        // Настраиваем тему
-        if (telegramWebApp.themeParams) {
-            applyTelegramTheme(telegramWebApp.themeParams);
+    try {
+        if (window.Telegram && window.Telegram.WebApp) {
+            telegramWebApp = window.Telegram.WebApp;
+            isTelegramApp = true;
+            
+            console.log('Telegram Web App инициализирован в игре');
+            
+            // Переопределяем проблемные методы
+            if (telegramWebApp.showPopup) {
+                const originalShowPopup = telegramWebApp.showPopup;
+                telegramWebApp.showPopup = function(message) {
+                    console.log('showPopup called in game.js, using showAlert instead');
+                    return telegramWebApp.showAlert(message);
+                };
+            }
+            
+            // Инициализируем Telegram Web App
+            telegramWebApp.ready();
+            
+            // Настраиваем тему
+            if (telegramWebApp.themeParams) {
+                applyTelegramTheme(telegramWebApp.themeParams);
+            }
+            
+            // Слушаем изменения темы
+            telegramWebApp.onEvent('themeChanged', function() {
+                applyTelegramTheme(telegramWebApp.themeParams);
+            });
+            
+            // Расширяем приложение на всю высоту
+            telegramWebApp.expand();
+            
+            // Настраиваем главную кнопку
+            setupMainButton();
         }
-        
-        // Слушаем изменения темы
-        telegramWebApp.onEvent('themeChanged', function() {
-            applyTelegramTheme(telegramWebApp.themeParams);
-        });
-        
-        // Расширяем приложение на всю высоту
-        telegramWebApp.expand();
-        
-        // Настраиваем главную кнопку
-        setupMainButton();
+    } catch (e) {
+        console.log('Telegram WebApp not available in game, using fallback');
+        telegramWebApp = {
+            showAlert: (message) => alert(message),
+            showPopup: (message) => alert(message),
+            expand: () => {},
+            ready: () => {},
+            initDataUnsafe: { user: null }
+        };
     }
 }
 

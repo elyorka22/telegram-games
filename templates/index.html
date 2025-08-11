@@ -454,12 +454,23 @@
             tg.ready();
         } catch (e) {
             console.log('Telegram WebApp not available, using fallback');
+        }
+        
+        // Создаем безопасный fallback для всех методов
+        if (!tg) {
             tg = {
                 showAlert: (message) => alert(message),
                 showPopup: (message) => alert(message), // Fallback для showPopup
                 expand: () => {},
                 ready: () => {},
                 initDataUnsafe: { user: null }
+            };
+        } else {
+            // Переопределяем проблемные методы
+            const originalShowPopup = tg.showPopup;
+            tg.showPopup = function(message) {
+                console.log('showPopup called, using showAlert instead');
+                return tg.showAlert(message);
             };
         }
 
