@@ -3,6 +3,15 @@ import os
 
 app = Flask(__name__)
 
+@app.route('/', methods=['GET'])
+def index():
+    """Главная страница"""
+    return jsonify({
+        'message': 'Telegram Games API is running on Vercel!',
+        'status': 'ok',
+        'platform': 'vercel'
+    })
+
 @app.route('/api', methods=['GET'])
 def api_root():
     """API root endpoint"""
