@@ -121,7 +121,14 @@ function hideMainButton() {
 
 // Инициализация WebSocket соединения
 function initializeSocket() {
-    // Подключаемся к WebSocket серверу игр
+    // В production WebSocket может быть недоступен, поэтому используем fallback
+    if (window.location.hostname === 'telegram-games-two.vercel.app') {
+        console.log('Production режим - используем fallback без WebSocket');
+        showStaticBoard();
+        return;
+    }
+    
+    // Подключаемся к WebSocket серверу игр только в development
     socket = io('http://localhost:5002');
     
     socket.on('connect', function() {
@@ -216,6 +223,10 @@ function showStaticBoard() {
     gameType = GAME_TYPE;
     playerColor = 'white'; // По умолчанию белые
     
+    // Создаем начальную расстановку шахмат
+    const initialBoard = createInitialChessBoard();
+    updateBoard(initialBoard);
+    
     // Обновляем UI
     updateGameStatus('Игра началась (локальный режим)');
     updatePlayerStatus();
@@ -228,6 +239,37 @@ function showStaticBoard() {
     
     // Показываем главную кнопку
     showMainButton();
+}
+
+// Создание начальной расстановки шахмат
+function createInitialChessBoard() {
+    const board = Array(8).fill(null).map(() => Array(8).fill(null));
+    
+    // Расставляем пешки
+    for (let col = 0; col < 8; col++) {
+        board[1][col] = { color: 'black', type: 'pawn', symbol: '♙' };
+        board[6][col] = { color: 'white', type: 'pawn', symbol: '♟️' };
+    }
+    
+    // Расставляем остальные фигуры
+    const pieces = [
+        { type: 'rook', symbol: '♖', whiteSymbol: '♜' },
+        { type: 'knight', symbol: '♘', whiteSymbol: '♞' },
+        { type: 'bishop', symbol: '♗', whiteSymbol: '♝' },
+        { type: 'queen', symbol: '♕', whiteSymbol: '♛' },
+        { type: 'king', symbol: '♔', whiteSymbol: '♚' },
+        { type: 'bishop', symbol: '♗', whiteSymbol: '♝' },
+        { type: 'knight', symbol: '♘', whiteSymbol: '♞' },
+        { type: 'rook', symbol: '♖', whiteSymbol: '♜' }
+    ];
+    
+    for (let col = 0; col < 8; col++) {
+        const piece = pieces[col];
+        board[0][col] = { color: 'black', type: piece.type, symbol: piece.symbol };
+        board[7][col] = { color: 'white', type: piece.type, symbol: piece.whiteSymbol };
+    }
+    
+    return board;
 }
 
 // Создание игровой доски
