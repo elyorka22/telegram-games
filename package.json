@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "python app.py",
     "start": "python app.py",
-    "build": "echo 'No build step required for Python Flask app'",
+    "build": "echo 'Build completed'",
     "vercel-build": "echo 'Vercel build completed'"
   },
   "keywords": [
