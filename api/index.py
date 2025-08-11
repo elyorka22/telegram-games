@@ -251,6 +251,9 @@ def webhook():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
+            # Инициализируем приложение
+            loop.run_until_complete(application.initialize())
+            
             # Обрабатываем обновление асинхронно
             loop.run_until_complete(application.process_update(update))
             
@@ -272,6 +275,9 @@ def setup_webhook():
         # Создаем новую event loop для асинхронной операции
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
+        # Инициализируем приложение
+        loop.run_until_complete(application.initialize())
         
         # Устанавливаем webhook
         result = loop.run_until_complete(application.bot.set_webhook(url=webhook_url))
@@ -295,6 +301,9 @@ def webhook_status():
         # Создаем новую event loop для асинхронной операции
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
+        # Инициализируем приложение
+        loop.run_until_complete(application.initialize())
         
         webhook_info = loop.run_until_complete(application.bot.get_webhook_info())
         return jsonify({
