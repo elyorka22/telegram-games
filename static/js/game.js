@@ -148,6 +148,8 @@ function initializeSocket() {
     gameType = GAME_TYPE;
     gameMode = GAME_MODE;
     
+    console.log('Инициализация игры:', { gameId, gameType, gameMode });
+    
     // Если это игра с компьютером, показываем доску сразу
     if (gameMode === 'computer') {
         console.log('Режим игры с компьютером');
@@ -156,13 +158,16 @@ function initializeSocket() {
     }
     
     // В production WebSocket может быть недоступен, поэтому используем fallback
-    if (window.location.hostname === 'telegram-games-two.vercel.app') {
-        console.log('Production режим - используем fallback без WebSocket');
+    if (window.location.hostname === 'telegram-games-two.vercel.app' || 
+        window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1') {
+        console.log('Production/Development режим - используем fallback без WebSocket');
         showStaticBoard();
         return;
     }
     
     // Подключаемся к WebSocket серверу игр только в development
+    console.log('Попытка подключения к WebSocket...');
     socket = io('http://localhost:5002');
     
     socket.on('connect', function() {
@@ -266,6 +271,9 @@ function showStaticBoard() {
     updatePlayerStatus();
     updateGameTitle();
     
+    // Добавляем обработчик кликов для локального режима
+    setupLocalGame();
+    
     // Показываем уведомление
     if (isTelegramApp && telegramWebApp.showAlert) {
         telegramWebApp.showAlert('Игра началась! WebSocket недоступен, игра в локальном режиме.');
@@ -273,6 +281,78 @@ function showStaticBoard() {
     
     // Показываем главную кнопку
     showMainButton();
+}
+
+// Настройка локальной игры
+function setupLocalGame() {
+    console.log('Настройка локальной игры');
+    
+    // Переопределяем обработку кликов для локального режима
+    const squares = document.querySelectorAll('.chess-square');
+    squares.forEach(square => {
+        square.addEventListener('click', function() {
+            const row = parseInt(this.dataset.row);
+            const col = parseInt(this.dataset.col);
+            handleLocalGameClick(row, col);
+        });
+    });
+}
+
+// Обработка кликов в локальной игре
+function handleLocalGameClick(row, col) {
+    const square = getSquare(row, col);
+    const piece = board[row][col];
+    
+    if (selectedSquare) {
+        // Если уже выбрана клетка, пытаемся сделать ход
+        const fromRow = parseInt(selectedSquare.dataset.row);
+        const fromCol = parseInt(selectedSquare.dataset.col);
+        
+        if (fromRow === row && fromCol === col) {
+            // Кликнули на ту же клетку - отменяем выбор
+            clearSelection();
+        } else {
+            // Пытаемся сделать ход
+            if (makeLocalMove(fromRow, fromCol, row, col)) {
+                // Ход успешен
+                console.log('Ход выполнен:', fromRow, fromCol, '->', row, col);
+            }
+        }
+    } else {
+        // Выбираем клетку
+        if (piece && piece.color === 'white') {
+            selectSquare(row, col);
+        }
+    }
+}
+
+// Выполнение хода в локальной игре
+function makeLocalMove(fromRow, fromCol, toRow, toCol) {
+    const piece = board[fromRow][fromCol];
+    if (!piece || piece.color !== 'white') {
+        return false;
+    }
+    
+    // Простая проверка хода
+    if (isValidMove(piece, fromRow, fromCol, toRow, toCol)) {
+        // Выполняем ход
+        board[toRow][toCol] = piece;
+        board[fromRow][fromCol] = null;
+        updateBoard(board);
+        
+        // Добавляем ход в историю
+        addMoveToHistory({
+            from_pos: [fromRow, fromCol],
+            to_pos: [toRow, toCol],
+            piece: piece
+        });
+        
+        clearSelection();
+        updateGameStatus('Ход сделан!');
+        return true;
+    }
+    
+    return false;
 }
 
 // Создание начальной расстановки шахмат
