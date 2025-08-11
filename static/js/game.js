@@ -141,6 +141,12 @@ function initializeSocket() {
         });
     });
     
+    socket.on('connect_error', function(error) {
+        console.log('Ошибка подключения к WebSocket:', error);
+        // Fallback: показываем статичную доску
+        showStaticBoard();
+    });
+    
     socket.on('game_joined', function(data) {
         console.log('Присоединился к игре:', data);
         gameId = data.game_id;
@@ -199,6 +205,29 @@ function initializeSocket() {
             }
         }, 3000);
     });
+}
+
+// Fallback функция для показа статичной доски
+function showStaticBoard() {
+    console.log('Показываем статичную доску (WebSocket недоступен)');
+    
+    // Устанавливаем базовые значения
+    gameId = GAME_ID;
+    gameType = GAME_TYPE;
+    playerColor = 'white'; // По умолчанию белые
+    
+    // Обновляем UI
+    updateGameStatus('Игра началась (локальный режим)');
+    updatePlayerStatus();
+    updateGameTitle();
+    
+    // Показываем уведомление
+    if (isTelegramApp && telegramWebApp.showAlert) {
+        telegramWebApp.showAlert('Игра началась! WebSocket недоступен, игра в локальном режиме.');
+    }
+    
+    // Показываем главную кнопку
+    showMainButton();
 }
 
 // Создание игровой доски

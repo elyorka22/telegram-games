@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест игры</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест игры</h1>
+    
+    <div class="test-section">
+        <h3>1. Создание игры</h3>
+        <button class="btn" onclick="createGame()">Создать игру в шахматы</button>
+        <div id="createStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Присоединение к игре</h3>
+        <input type="text" id="gameId" placeholder="ID игры" style="padding: 5px; margin: 5px;">
+        <button class="btn" onclick="joinGame()">Присоединиться к игре</button>
+        <div id="joinStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Проверка статуса игры</h3>
+        <input type="text" id="userId" placeholder="ID пользователя" style="padding: 5px; margin: 5px;">
+        <button class="btn" onclick="checkGameStatus()">Проверить статус</button>
+        <div id="statusResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Переход к игре</h3>
+        <button class="btn" onclick="goToGame()">Перейти к игре</button>
+        <div id="gameStatus"></div>
+    </div>
+
+    <script>
+        let currentGameId = null;
+        let currentUserId = null;
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        async function createGame() {
+            const userId = 'test_' + Math.floor(Math.random() * 10000);
+            currentUserId = userId;
+            
+            try {
+                const response = await fetch('https://telegram-games-two.vercel.app/api/lobby/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        username: 'TestPlayer',
+                        game_type: 'chess'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    currentGameId = data.game.id;
+                    document.getElementById('gameId').value = currentGameId;
+                    showStatus('createStatus', `Игра создана! ID: ${currentGameId}`, 'success');
+                } else {
+                    showStatus('createStatus', `Ошибка: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('createStatus', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function joinGame() {
+            const gameId = document.getElementById('gameId').value;
+            const userId = 'second_' + Math.floor(Math.random() * 10000);
+            
+            if (!gameId) {
+                showStatus('joinStatus', 'Введите ID игры', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://telegram-games-two.vercel.app/api/lobby/join', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        username: 'SecondPlayer',
+                        game_id: gameId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    showStatus('joinStatus', `Присоединились к игре! Статус: ${data.game.status}`, 'success');
+                } else {
+                    showStatus('joinStatus', `Ошибка: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('joinStatus', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkGameStatus() {
+            const userId = document.getElementById('userId').value || currentUserId;
+            
+            if (!userId) {
+                showStatus('statusResult', 'Введите ID пользователя', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://telegram-games-two.vercel.app/api/lobby/user/${userId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        showStatus('statusResult', `Игра найдена! ID: ${data.game.id}, Статус: ${data.game.status}`, 'success');
+                    } else {
+                        showStatus('statusResult', `Ошибка: ${data.error}`, 'error');
+                    }
+                } else {
+                    showStatus('statusResult', `HTTP ошибка: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showStatus('statusResult', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        function goToGame() {
+            if (currentGameId) {
+                const gameUrl = `https://telegram-games-two.vercel.app/game?game_id=${currentGameId}&type=chess`;
+                showStatus('gameStatus', `Переход к игре: <a href="${gameUrl}" target="_blank">${gameUrl}</a>`, 'info');
+            } else {
+                showStatus('gameStatus', 'Сначала создайте игру', 'error');
+            }
+        }
+    </script>
+</body>
+</html> 
