@@ -469,8 +469,8 @@
             // Переопределяем проблемные методы
             const originalShowPopup = tg.showPopup;
             tg.showPopup = function(message) {
-                console.log('showPopup called, using showAlert instead');
-                return tg.showAlert(message);
+                console.log('showPopup called, using alert instead');
+                return alert(message); // Используем alert напрямую, а не tg.showAlert
             };
         }
 

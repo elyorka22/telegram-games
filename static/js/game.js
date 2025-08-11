@@ -36,8 +36,8 @@ function initializeTelegramWebApp() {
             if (telegramWebApp.showPopup) {
                 const originalShowPopup = telegramWebApp.showPopup;
                 telegramWebApp.showPopup = function(message) {
-                    console.log('showPopup called in game.js, using showAlert instead');
-                    return telegramWebApp.showAlert(message);
+                    console.log('showPopup called in game.js, using alert instead');
+                    return alert(message); // Используем alert напрямую
                 };
             }
             
