@@ -21,7 +21,8 @@ def game():
     """Страница игры"""
     game_id = request.args.get('game_id')
     game_type = request.args.get('type', 'chess')
-    return render_template('game.html', game_id=game_id, game_type=game_type)
+    game_mode = request.args.get('mode', 'multiplayer')  # multiplayer или computer
+    return render_template('game.html', game_id=game_id, game_type=game_type, game_mode=game_mode)
 
 @app.route('/static/<path:filename>')
 def static_files(filename):

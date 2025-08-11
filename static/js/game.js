@@ -4,12 +4,14 @@ let socket = null;
 let gameId = null;
 let playerColor = null;
 let gameType = null;
+let gameMode = null;
 let board = [];
 let selectedSquare = null;
 let validMoves = [];
 let moveHistory = [];
 let telegramWebApp = null;
 let isTelegramApp = false;
+let isComputerTurn = false;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
@@ -121,6 +123,18 @@ function hideMainButton() {
 
 // Инициализация WebSocket соединения
 function initializeSocket() {
+    // Устанавливаем глобальные переменные
+    gameId = GAME_ID;
+    gameType = GAME_TYPE;
+    gameMode = GAME_MODE;
+    
+    // Если это игра с компьютером, показываем доску сразу
+    if (gameMode === 'computer') {
+        console.log('Режим игры с компьютером');
+        showComputerGame();
+        return;
+    }
+    
     // В production WebSocket может быть недоступен, поэтому используем fallback
     if (window.location.hostname === 'telegram-games-two.vercel.app') {
         console.log('Production режим - используем fallback без WebSocket');
@@ -600,3 +614,214 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style); 
+
+// Функция для игры с компьютером
+function showComputerGame() {
+    console.log('Запуск игры с компьютером');
+    
+    // Устанавливаем параметры игры
+    playerColor = 'white'; // Игрок всегда играет белыми
+    gameType = GAME_TYPE;
+    
+    // Создаем начальную расстановку шахмат
+    const initialBoard = createInitialChessBoard();
+    updateBoard(initialBoard);
+    
+    // Обновляем UI
+    updateGameStatus('Ваш ход (белые)');
+    updatePlayerStatus();
+    updateGameTitle();
+    
+    // Показываем уведомление
+    if (isTelegramApp && telegramWebApp.showAlert) {
+        telegramWebApp.showAlert('Игра с компьютером началась! Вы играете белыми.');
+    }
+    
+    // Показываем главную кнопку
+    showMainButton();
+    
+    // Добавляем обработчик для ходов компьютера
+    setupComputerGame();
+}
+
+// Настройка игры с компьютером
+function setupComputerGame() {
+    // Переопределяем обработку кликов для игры с компьютером
+    const squares = document.querySelectorAll('.chess-square');
+    squares.forEach(square => {
+        square.addEventListener('click', function() {
+            if (isComputerTurn) {
+                // Если ход компьютера, игнорируем клик
+                return;
+            }
+            
+            const row = parseInt(this.dataset.row);
+            const col = parseInt(this.dataset.col);
+            handleComputerGameClick(row, col);
+        });
+    });
+}
+
+// Обработка кликов в игре с компьютером
+function handleComputerGameClick(row, col) {
+    const square = getSquare(row, col);
+    const piece = board[row][col];
+    
+    if (selectedSquare) {
+        // Если уже выбрана клетка, пытаемся сделать ход
+        const fromRow = parseInt(selectedSquare.dataset.row);
+        const fromCol = parseInt(selectedSquare.dataset.col);
+        
+        if (fromRow === row && fromCol === col) {
+            // Кликнули на ту же клетку - отменяем выбор
+            clearSelection();
+        } else {
+            // Пытаемся сделать ход
+            if (makeComputerMove(fromRow, fromCol, row, col)) {
+                // Ход успешен, теперь ход компьютера
+                setTimeout(() => {
+                    makeComputerMove();
+                }, 1000);
+            }
+        }
+    } else {
+        // Выбираем клетку
+        if (piece && piece.color === 'white') {
+            selectSquare(row, col);
+        }
+    }
+}
+
+// Выполнение хода в игре с компьютером
+function makeComputerMove(fromRow, fromCol, toRow, toCol) {
+    if (fromRow !== undefined && fromCol !== undefined && toRow !== undefined && toCol !== undefined) {
+        // Ход игрока
+        const piece = board[fromRow][fromCol];
+        if (!piece || piece.color !== 'white') {
+            return false;
+        }
+        
+        // Простая проверка хода (можно улучшить)
+        if (isValidMove(piece, fromRow, fromCol, toRow, toCol)) {
+            // Выполняем ход
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = null;
+            updateBoard(board);
+            addMoveToHistory({
+                from_pos: [fromRow, fromCol],
+                to_pos: [toRow, toCol],
+                piece: piece
+            });
+            clearSelection();
+            
+            // Передаем ход компьютеру
+            isComputerTurn = true;
+            updateGameStatus('Ход компьютера (черные)...');
+            
+            return true;
+        }
+        return false;
+    } else {
+        // Ход компьютера
+        makeComputerMove();
+    }
+}
+
+// Простая логика хода компьютера
+function makeComputerMove() {
+    // Находим все черные фигуры
+    const blackPieces = [];
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const piece = board[row][col];
+            if (piece && piece.color === 'black') {
+                blackPieces.push({row, col, piece});
+            }
+        }
+    }
+    
+    if (blackPieces.length > 0) {
+        // Выбираем случайную фигуру
+        const randomPiece = blackPieces[Math.floor(Math.random() * blackPieces.length)];
+        
+        // Находим возможные ходы для этой фигуры
+        const possibleMoves = getPossibleMoves(randomPiece.piece, randomPiece.row, randomPiece.col);
+        
+        if (possibleMoves.length > 0) {
+            // Выбираем случайный ход
+            const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            
+            // Выполняем ход
+            board[randomMove.row][randomMove.col] = randomPiece.piece;
+            board[randomPiece.row][randomPiece.col] = null;
+            updateBoard(board);
+            addMoveToHistory({
+                from_pos: [randomPiece.row, randomPiece.col],
+                to_pos: [randomMove.row, randomMove.col],
+                piece: randomPiece.piece
+            });
+            
+            // Передаем ход игроку
+            isComputerTurn = false;
+            updateGameStatus('Ваш ход (белые)');
+        }
+    }
+}
+
+// Простая проверка валидности хода
+function isValidMove(piece, fromRow, fromCol, toRow, toCol) {
+    // Базовая проверка - фигура не может ходить на клетку с фигурой того же цвета
+    const targetPiece = board[toRow][toCol];
+    if (targetPiece && targetPiece.color === piece.color) {
+        return false;
+    }
+    
+    // Простые правила для пешки
+    if (piece.type === 'pawn') {
+        if (piece.color === 'white') {
+            // Белая пешка ходит вперед
+            if (fromCol === toCol && toRow === fromRow - 1 && !targetPiece) {
+                return true;
+            }
+            // Первый ход пешки может быть на 2 клетки
+            if (fromRow === 6 && fromCol === toCol && toRow === 4 && !targetPiece && !board[5][fromCol]) {
+                return true;
+            }
+            // Взятие по диагонали
+            if (Math.abs(fromCol - toCol) === 1 && toRow === fromRow - 1 && targetPiece) {
+                return true;
+            }
+        }
+    }
+    
+    // Для других фигур пока разрешаем любые ходы
+    return true;
+}
+
+// Получение возможных ходов для фигуры
+function getPossibleMoves(piece, row, col) {
+    const moves = [];
+    
+    // Простая логика для пешки
+    if (piece.type === 'pawn') {
+        if (piece.color === 'black') {
+            // Черная пешка ходит вниз
+            if (row < 7 && !board[row + 1][col]) {
+                moves.push({row: row + 1, col: col});
+            }
+            // Первый ход пешки может быть на 2 клетки
+            if (row === 1 && !board[2][col] && !board[3][col]) {
+                moves.push({row: 3, col: col});
+            }
+            // Взятие по диагонали
+            if (row < 7 && col > 0 && board[row + 1][col - 1] && board[row + 1][col - 1].color === 'white') {
+                moves.push({row: row + 1, col: col - 1});
+            }
+            if (row < 7 && col < 7 && board[row + 1][col + 1] && board[row + 1][col + 1].color === 'white') {
+                moves.push({row: row + 1, col: col + 1});
+            }
+        }
+    }
+    
+    return moves;
+} 

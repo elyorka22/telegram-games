@@ -391,6 +391,23 @@
                     </div>
                 </div>
 
+                <div class="games-grid" style="margin-top: 30px;">
+                    <div class="game-card" style="background: linear-gradient(45deg, #9b59b6, #8e44ad);" onclick="playWithComputer('chess')">
+                        <div class="game-icon">🤖</div>
+                        <h3>Игра с компьютером</h3>
+                        <p>Сразитесь с ИИ в шахматы</p>
+                        <div class="game-features">
+                            <span class="feature">🤖 ИИ противник</span>
+                            <span class="feature">⚡ Мгновенная игра</span>
+                            <span class="feature">🎯 Разные уровни</span>
+                        </div>
+                        <button class="btn" style="background: linear-gradient(45deg, #9b59b6, #8e44ad);">
+                            <span class="btn-icon">🤖</span>
+                            Играть с компьютером
+                        </button>
+                    </div>
+                </div>
+
                 <div id="status" class="status hidden">
                     <div class="loading-spinner"></div>
                     <p id="statusText">Создание игры...</p>
@@ -609,6 +626,33 @@
                 statusText.textContent = 'Ошибка подключения к серверу';
                 setTimeout(() => status.classList.add('hidden'), 3000);
             }
+        }
+
+        // Функция игры с компьютером
+        async function playWithComputer(gameType) {
+            const status = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            status.classList.remove('hidden');
+            statusText.textContent = `Запуск игры с компьютером в ${gameType === 'chess' ? 'шахматы' : 'шашки'}...`;
+            
+            // Получаем данные пользователя
+            const user = tg?.initDataUnsafe?.user || {
+                id: Math.floor(Math.random() * 1000000),
+                username: 'Player' + Math.floor(Math.random() * 1000)
+            };
+            
+            // Создаем уникальный ID для игры с компьютером
+            const computerGameId = 'computer_' + Date.now();
+            
+            // Показываем уведомление
+            tg.showAlert(`Игра с компьютером начинается! Вы играете белыми.`);
+            
+            // Переходим к игре
+            setTimeout(() => {
+                status.classList.add('hidden');
+                window.location.href = `/game?game_id=${computerGameId}&type=${gameType}&mode=computer`;
+            }, 2000);
         }
 
         // Автообновление лобби каждые 10 секунд
