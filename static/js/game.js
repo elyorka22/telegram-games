@@ -15,11 +15,18 @@ let isComputerTurn = false;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, начинаем инициализацию игры');
+    console.log('GAME_ID:', GAME_ID);
+    console.log('GAME_TYPE:', GAME_TYPE);
+    console.log('GAME_MODE:', GAME_MODE);
+    
     initializeTelegramWebApp();
     initializeSocket();
     createGameBoard();
     setupEventListeners();
     setupTelegramUI();
+    
+    console.log('Инициализация завершена');
 });
 
 // Инициализация Telegram WebApp
@@ -157,100 +164,106 @@ function initializeSocket() {
         return;
     }
     
-    // В production WebSocket может быть недоступен, поэтому используем fallback
-    if (window.location.hostname === 'telegram-games-two.vercel.app' || 
-        window.location.hostname === 'localhost' || 
-        window.location.hostname === '127.0.0.1') {
-        console.log('Production/Development режим - используем fallback без WebSocket');
+    // Проверяем, доступен ли WebSocket
+    const isWebSocketAvailable = typeof io !== 'undefined' && 
+                                window.location.hostname !== 'telegram-games-two.vercel.app';
+    
+    if (!isWebSocketAvailable) {
+        console.log('WebSocket недоступен - используем fallback режим');
         showStaticBoard();
         return;
     }
     
-    // Подключаемся к WebSocket серверу игр только в development
+    // Подключаемся к WebSocket серверу игр
     console.log('Попытка подключения к WebSocket...');
-    socket = io('http://localhost:5002');
-    
-    socket.on('connect', function() {
-        console.log('Подключен к серверу игры');
+    try {
+        socket = io('http://localhost:5002');
         
-        // Получаем данные пользователя
-        const user = window.Telegram?.WebApp?.initDataUnsafe?.user || {
-            id: Math.floor(Math.random() * 1000000),
-            username: 'Player' + Math.floor(Math.random() * 1000)
-        };
-        
-        // Присоединяемся к игре
-        socket.emit('join_game', { 
-            game_id: GAME_ID,
-            game_type: GAME_TYPE,
-            player_id: user.id
+        socket.on('connect', function() {
+            console.log('Подключен к серверу игры');
+            
+            // Получаем данные пользователя
+            const user = window.Telegram?.WebApp?.initDataUnsafe?.user || {
+                id: Math.floor(Math.random() * 1000000),
+                username: 'Player' + Math.floor(Math.random() * 1000)
+            };
+            
+            // Присоединяемся к игре
+            socket.emit('join_game', { 
+                game_id: GAME_ID,
+                game_type: GAME_TYPE,
+                player_id: user.id
+            });
         });
-    });
-    
-    socket.on('connect_error', function(error) {
-        console.log('Ошибка подключения к WebSocket:', error);
-        // Fallback: показываем статичную доску
-        showStaticBoard();
-    });
-    
-    socket.on('game_joined', function(data) {
-        console.log('Присоединился к игре:', data);
-        gameId = data.game_id;
-        playerColor = data.color;
-        gameType = data.game_type;
-        updateBoard(data.board);
-        updateGameStatus(data.status);
-        updatePlayerStatus();
-        updateGameTitle();
         
-        // Показываем главную кнопку в Telegram
-        showMainButton();
-    });
-    
-    socket.on('move_made', function(data) {
-        console.log('Ход сделан:', data);
-        updateBoard(data.board);
-        updateGameStatus(data.status);
-        addMoveToHistory(data);
-        clearSelection();
+        socket.on('connect_error', function(error) {
+            console.log('Ошибка подключения к WebSocket:', error);
+            // Fallback: показываем статичную доску
+            showStaticBoard();
+        });
         
-        if (data.game_over) {
-            showGameOver(data.winner);
-            // Скрываем главную кнопку в Telegram
-            hideMainButton();
-        }
-    });
-    
-    socket.on('valid_moves', function(data) {
-        validMoves = data.moves;
-        highlightValidMoves();
-    });
-    
-    socket.on('error', function(data) {
-        showError(data.message);
+        socket.on('game_joined', function(data) {
+            console.log('Присоединился к игре:', data);
+            gameId = data.game_id;
+            playerColor = data.color;
+            gameType = data.game_type;
+            updateBoard(data.board);
+            updateGameStatus(data.status);
+            updatePlayerStatus();
+            updateGameTitle();
+            
+            // Показываем главную кнопку в Telegram
+            showMainButton();
+        });
         
-        // В Telegram показываем ошибку
-        if (isTelegramApp && telegramWebApp.showAlert) {
-            telegramWebApp.showAlert('Ошибка: ' + data.message);
-        }
-    });
-    
-    socket.on('opponent_disconnected', function() {
-        showError('Противник отключился');
-        
-        // В Telegram показываем уведомление
-        if (isTelegramApp && telegramWebApp.showAlert) {
-            telegramWebApp.showAlert('Противник отключился');
-        }
-        
-        setTimeout(() => {
-            if (isTelegramApp) {
-                telegramWebApp.close();
-            } else {
-                window.location.href = '/';
+        socket.on('move_made', function(data) {
+            console.log('Ход сделан:', data);
+            updateBoard(data.board);
+            updateGameStatus(data.status);
+            addMoveToHistory(data);
+            clearSelection();
+            
+            if (data.game_over) {
+                showGameOver(data.winner);
+                // Скрываем главную кнопку в Telegram
+                hideMainButton();
             }
-        }, 3000);
-    });
+        });
+        
+        socket.on('valid_moves', function(data) {
+            validMoves = data.moves;
+            highlightValidMoves();
+        });
+        
+        socket.on('error', function(data) {
+            showError(data.message);
+            
+            // В Telegram показываем ошибку
+            if (isTelegramApp && telegramWebApp.showAlert) {
+                telegramWebApp.showAlert('Ошибка: ' + data.message);
+            }
+        });
+        
+        socket.on('opponent_disconnected', function() {
+            showError('Противник отключился');
+            
+            // В Telegram показываем уведомление
+            if (isTelegramApp && telegramWebApp.showAlert) {
+                telegramWebApp.showAlert('Противник отключился');
+            }
+            
+            setTimeout(() => {
+                if (isTelegramApp) {
+                    telegramWebApp.close();
+                } else {
+                    window.location.href = '/';
+                }
+            }, 3000);
+        });
+    } catch (error) {
+        console.log('Ошибка при инициализации WebSocket:', error);
+        showStaticBoard();
+    }
 }
 
 // Fallback функция для показа статичной доски
@@ -281,6 +294,8 @@ function showStaticBoard() {
     
     // Показываем главную кнопку
     showMainButton();
+    
+    console.log('Статичная доска инициализирована успешно');
 }
 
 // Настройка локальной игры
@@ -388,7 +403,15 @@ function createInitialChessBoard() {
 
 // Создание игровой доски
 function createGameBoard() {
+    console.log('Создание игровой доски...');
     const gameBoard = document.getElementById('chessBoard');
+    
+    if (!gameBoard) {
+        console.error('Элемент chessBoard не найден!');
+        return;
+    }
+    
+    console.log('Элемент chessBoard найден, создаем клетки...');
     
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
@@ -404,6 +427,8 @@ function createGameBoard() {
             gameBoard.appendChild(square);
         }
     }
+    
+    console.log('Игровая доска создана успешно');
 }
 
 // Обработка клика по клетке
