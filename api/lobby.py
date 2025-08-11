@@ -11,6 +11,14 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Добавляем CORS заголовки
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
 # Хранилище лобби (в реальном проекте это должна быть база данных)
 LOBBY_STORAGE = {
     'games': {},  # {game_id: game_info}
@@ -75,6 +83,7 @@ class LobbyManager:
             'ready': True
         })
         
+        # Обновляем информацию о пользователе
         self.users[user_id] = {
             'current_game': game_id,
             'username': username
@@ -264,4 +273,7 @@ def leave_game():
         return jsonify({'error': str(e)}), 500
 
 # Export the Flask app for Vercel
-app.debug = False 
+app.debug = False
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001) 

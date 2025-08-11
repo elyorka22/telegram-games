@@ -4,10 +4,226 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Онлайн Игры - Шахматы и Шашки</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <!-- Telegram Web App JS -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .game-selection {
+            margin-bottom: 40px;
+        }
+
+        .game-selection h2 {
+            text-align: center;
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .chess-card .game-icon {
+            color: #2c3e50;
+        }
+
+        .checkers-card .game-icon {
+            color: #e74c3c;
+        }
+
+        .game-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .game-card p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .game-features {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        .status {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .games-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .game-card {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -21,7 +237,7 @@
                 <h2>Выберите игру</h2>
                 
                 <div class="games-grid">
-                    <div class="game-card chess-card">
+                    <div class="game-card chess-card" onclick="startGame('chess')">
                         <div class="game-icon">♔♛</div>
                         <h3>Шахматы</h3>
                         <p>Классическая игра стратегии и тактики</p>
@@ -30,13 +246,13 @@
                             <span class="feature">⚡ Real-time</span>
                             <span class="feature">🎯 Шах и мат</span>
                         </div>
-                        <button id="findChessGameBtn" class="btn btn-primary">
+                        <button class="btn btn-primary">
                             <span class="btn-icon">🎮</span>
                             Играть в шахматы
                         </button>
                     </div>
                     
-                    <div class="game-card checkers-card">
+                    <div class="game-card checkers-card" onclick="startGame('checkers')">
                         <div class="game-icon">⚪⚫</div>
                         <h3>Шашки</h3>
                         <p>Быстрая и динамичная игра</p>
@@ -45,7 +261,7 @@
                             <span class="feature">👑 Дамки</span>
                             <span class="feature">🎯 Быстрая игра</span>
                         </div>
-                        <button id="findCheckersGameBtn" class="btn btn-secondary">
+                        <button class="btn btn-secondary">
                             <span class="btn-icon">🎯</span>
                             Играть в шашки
                         </button>
@@ -84,42 +300,46 @@
                 </div>
             </div>
         </main>
-
-        <!-- Модальное окно с правилами -->
-        <div id="rulesModal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2>Правила игр</h2>
-                <div class="rules-content">
-                    <div class="rules-section">
-                        <h3>♔ Шахматы</h3>
-                        <p><strong>Цель:</strong> Поставить мат королю противника.</p>
-                        <ul>
-                            <li><strong>Пешка (♙):</strong> Ходит на одну клетку вперед, первый ход - на две клетки. Бьет по диагонали.</li>
-                            <li><strong>Ладья (♖):</strong> Ходит по горизонтали и вертикали на любое количество клеток.</li>
-                            <li><strong>Конь (♘):</strong> Ходит буквой "Г" - на две клетки в одном направлении и одну в перпендикулярном.</li>
-                            <li><strong>Слон (♗):</strong> Ходит по диагонали на любое количество клеток.</li>
-                            <li><strong>Ферзь (♕):</strong> Ходит как ладья + слон.</li>
-                            <li><strong>Король (♔):</strong> Ходит на одну клетку в любом направлении.</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="rules-section">
-                        <h3>⚪ Шашки</h3>
-                        <p><strong>Цель:</strong> Захватить все шашки противника или заблокировать их.</p>
-                        <ul>
-                            <li><strong>Обычная шашка:</strong> Ходит только вперед по диагонали на одну клетку.</li>
-                            <li><strong>Взятие:</strong> Обязательно, если возможно. Шашка "перепрыгивает" через шашку противника.</li>
-                            <li><strong>Дамка (👑):</strong> При достижении последней горизонтали шашка становится дамкой.</li>
-                            <li><strong>Дамка:</strong> Ходит по диагонали на любое количество клеток.</li>
-                            <li><strong>Множественное взятие:</strong> Если после взятия возможно еще одно - оно обязательно.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Инициализация Telegram WebApp
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Функция для запуска игры
+        function startGame(gameType) {
+            const status = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            status.classList.remove('hidden');
+            statusText.textContent = `Запуск ${gameType === 'chess' ? 'шахмат' : 'шашек'}...`;
+            
+            // Показываем статус загрузки
+            setTimeout(() => {
+                statusText.textContent = 'Поиск противника...';
+                
+                // Имитация поиска противника
+                setTimeout(() => {
+                    statusText.textContent = 'Противник найден! Начинаем игру...';
+                    
+                    // Здесь будет логика запуска игры
+                    setTimeout(() => {
+                        tg.showAlert(`Игра ${gameType === 'chess' ? 'в шахматы' : 'в шашки'} запущена!`);
+                        status.classList.add('hidden');
+                    }, 1000);
+                }, 2000);
+            }, 1000);
+        }
+
+        // Обработка нажатий на карточки игр
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const gameType = this.classList.contains('chess-card') ? 'chess' : 'checkers';
+                startGame(gameType);
+            });
+        });
+    </script>
 </body>
 </html> 

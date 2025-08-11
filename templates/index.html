@@ -427,12 +427,22 @@
 
     <script>
         // Инициализация Telegram WebApp
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
+        let tg = null;
+        try {
+            tg = window.Telegram.WebApp;
+            tg.expand();
+            tg.ready();
+        } catch (e) {
+            console.log('Telegram WebApp not available, using fallback');
+            tg = {
+                showAlert: (message) => alert(message),
+                expand: () => {},
+                ready: () => {}
+            };
+        }
 
         // Получаем данные пользователя
-        const user = tg.initDataUnsafe?.user || {
+        const user = tg?.initDataUnsafe?.user || {
             id: Math.floor(Math.random() * 1000000),
             username: 'Player' + Math.floor(Math.random() * 1000)
         };
@@ -451,6 +461,11 @@
             
             try {
                 const response = await fetch(`${API_BASE}/games`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.status === 'ok') {
@@ -459,6 +474,7 @@
                     gamesList.innerHTML = '<div class="status"><p>Ошибка загрузки игр</p></div>';
                 }
             } catch (error) {
+                console.error('Error refreshing lobby:', error);
                 gamesList.innerHTML = '<div class="status"><p>Ошибка подключения к серверу</p></div>';
             }
         }
@@ -507,6 +523,10 @@
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.status === 'ok') {
@@ -523,6 +543,7 @@
                     setTimeout(() => status.classList.add('hidden'), 3000);
                 }
             } catch (error) {
+                console.error('Error creating game:', error);
                 statusText.textContent = 'Ошибка подключения к серверу';
                 setTimeout(() => status.classList.add('hidden'), 3000);
             }
@@ -548,6 +569,10 @@
                         game_id: gameId
                     })
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
                 const data = await response.json();
                 
@@ -575,6 +600,7 @@
                     setTimeout(() => status.classList.add('hidden'), 3000);
                 }
             } catch (error) {
+                console.error('Error joining game:', error);
                 statusText.textContent = 'Ошибка подключения к серверу';
                 setTimeout(() => status.classList.add('hidden'), 3000);
             }
