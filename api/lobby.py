@@ -249,6 +249,28 @@ def get_game_info(game_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/lobby/user/<user_id>', methods=['GET'])
+def get_user_game(user_id):
+    """Получить информацию об игре пользователя"""
+    try:
+        user_info = lobby_manager.users.get(user_id)
+        
+        if not user_info or not user_info.get('current_game'):
+            return jsonify({'error': 'У пользователя нет активной игры'}), 404
+        
+        game_id = user_info['current_game']
+        game_info = lobby_manager.get_game_info(game_id)
+        
+        if not game_info:
+            return jsonify({'error': 'Игра не найдена'}), 404
+        
+        return jsonify({
+            'status': 'ok',
+            'game': game_info
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/lobby/leave', methods=['POST'])
 def leave_game():
     """Покинуть игру"""

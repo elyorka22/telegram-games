@@ -533,6 +533,11 @@
                     statusText.textContent = 'Игра создана! Ожидание противника...';
                     tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${data.game.id}`);
                     
+                    // Показываем уведомление о том, что нужно ждать второго игрока
+                    setTimeout(() => {
+                        tg.showAlert('Ожидайте присоединения второго игрока. Вы будете автоматически перенаправлены к игре.');
+                    }, 2000);
+                    
                     // Обновляем список игр
                     setTimeout(() => {
                         refreshLobby();
@@ -608,6 +613,33 @@
 
         // Автообновление лобби каждые 10 секунд
         setInterval(refreshLobby, 10000);
+        
+        // Проверяем статус текущей игры каждые 5 секунд
+        setInterval(checkCurrentGameStatus, 5000);
+        
+        // Функция проверки статуса текущей игры
+        async function checkCurrentGameStatus() {
+            // Получаем данные пользователя
+            const user = tg?.initDataUnsafe?.user || {
+                id: Math.floor(Math.random() * 1000000),
+                username: 'Player' + Math.floor(Math.random() * 1000)
+            };
+            
+            try {
+                // Проверяем, есть ли у пользователя активная игра
+                const response = await fetch(`${API_BASE}/user/${user.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'ok' && data.game && data.game.status === 'playing') {
+                        // Игра началась, переходим к ней
+                        tg.showAlert('Игра начинается! Противник присоединился!');
+                        window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
+                    }
+                }
+            } catch (error) {
+                // Игнорируем ошибки, если у пользователя нет активной игры
+            }
+        }
     </script>
 </body>
 </html> 
