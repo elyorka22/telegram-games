@@ -121,12 +121,24 @@ function hideMainButton() {
 
 // Инициализация WebSocket соединения
 function initializeSocket() {
-    socket = io();
+    // Подключаемся к WebSocket серверу игр
+    socket = io('http://localhost:5002');
     
     socket.on('connect', function() {
         console.log('Подключен к серверу игры');
+        
+        // Получаем данные пользователя
+        const user = window.Telegram?.WebApp?.initDataUnsafe?.user || {
+            id: Math.floor(Math.random() * 1000000),
+            username: 'Player' + Math.floor(Math.random() * 1000)
+        };
+        
         // Присоединяемся к игре
-        socket.emit('join_game', { game_id: GAME_ID });
+        socket.emit('join_game', { 
+            game_id: GAME_ID,
+            game_type: GAME_TYPE,
+            player_id: user.id
+        });
     });
     
     socket.on('game_joined', function(data) {
@@ -271,10 +283,16 @@ function clearValidMoves() {
 
 // Выполнение хода
 function makeMove(fromRow, fromCol, toRow, toCol) {
+    // Получаем данные пользователя
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user || {
+        id: Math.floor(Math.random() * 1000000)
+    };
+    
     socket.emit('make_move', {
         game_id: gameId,
         from_pos: [fromRow, fromCol],
-        to_pos: [toRow, toCol]
+        to_pos: [toRow, toCol],
+        player_id: user.id
     });
 }
 
