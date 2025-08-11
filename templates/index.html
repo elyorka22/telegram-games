@@ -139,6 +139,10 @@
             background: linear-gradient(45deg, #e74c3c, #c0392b);
         }
 
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -174,6 +178,99 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .lobby-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .lobby-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .lobby-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .games-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .game-item {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .game-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .game-info {
+            flex: 1;
+        }
+
+        .game-type {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .game-creator {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .game-players {
+            color: #27ae60;
+            font-size: 0.9rem;
+        }
+
+        .join-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .join-btn:hover {
+            background: #2ecc71;
+            transform: scale(1.05);
+        }
+
+        .join-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .features {
@@ -222,6 +319,18 @@
             .game-card {
                 padding: 20px;
             }
+
+            .lobby-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .game-item {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -233,11 +342,25 @@
         </header>
 
         <main class="main-content">
+            <!-- Секция лобби -->
+            <div class="lobby-section">
+                <div class="lobby-header">
+                    <h2 class="lobby-title">🎯 Доступные игры</h2>
+                    <button class="refresh-btn" onclick="refreshLobby()">🔄 Обновить</button>
+                </div>
+                <div id="gamesList" class="games-list">
+                    <div class="status">
+                        <div class="loading-spinner"></div>
+                        <p>Загрузка доступных игр...</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="game-selection">
-                <h2>Выберите игру</h2>
+                <h2>Создать новую игру</h2>
                 
                 <div class="games-grid">
-                    <div class="game-card chess-card" onclick="startGame('chess')">
+                    <div class="game-card chess-card" onclick="createGame('chess')">
                         <div class="game-icon">♔♛</div>
                         <h3>Шахматы</h3>
                         <p>Классическая игра стратегии и тактики</p>
@@ -248,11 +371,11 @@
                         </div>
                         <button class="btn btn-primary">
                             <span class="btn-icon">🎮</span>
-                            Играть в шахматы
+                            Создать игру в шахматы
                         </button>
                     </div>
                     
-                    <div class="game-card checkers-card" onclick="startGame('checkers')">
+                    <div class="game-card checkers-card" onclick="createGame('checkers')">
                         <div class="game-icon">⚪⚫</div>
                         <h3>Шашки</h3>
                         <p>Быстрая и динамичная игра</p>
@@ -263,14 +386,14 @@
                         </div>
                         <button class="btn btn-secondary">
                             <span class="btn-icon">🎯</span>
-                            Играть в шашки
+                            Создать игру в шашки
                         </button>
                     </div>
                 </div>
 
                 <div id="status" class="status hidden">
                     <div class="loading-spinner"></div>
-                    <p id="statusText">Поиск противника...</p>
+                    <p id="statusText">Создание игры...</p>
                 </div>
             </div>
 
@@ -308,38 +431,157 @@
         tg.expand();
         tg.ready();
 
-        // Функция для запуска игры
-        function startGame(gameType) {
+        // Получаем данные пользователя
+        const user = tg.initDataUnsafe?.user || {
+            id: Math.floor(Math.random() * 1000000),
+            username: 'Player' + Math.floor(Math.random() * 1000)
+        };
+
+        // API URL
+        const API_BASE = 'https://telegram-games-two.vercel.app/api/lobby';
+
+        // Загружаем доступные игры при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshLobby();
+        });
+
+        // Функция обновления лобби
+        async function refreshLobby() {
+            const gamesList = document.getElementById('gamesList');
+            
+            try {
+                const response = await fetch(`${API_BASE}/games`);
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    displayGames(data.games);
+                } else {
+                    gamesList.innerHTML = '<div class="status"><p>Ошибка загрузки игр</p></div>';
+                }
+            } catch (error) {
+                gamesList.innerHTML = '<div class="status"><p>Ошибка подключения к серверу</p></div>';
+            }
+        }
+
+        // Отображение списка игр
+        function displayGames(games) {
+            const gamesList = document.getElementById('gamesList');
+            
+            if (games.length === 0) {
+                gamesList.innerHTML = '<div class="status"><p>Нет доступных игр. Создайте свою!</p></div>';
+                return;
+            }
+            
+            gamesList.innerHTML = games.map(game => `
+                <div class="game-item">
+                    <div class="game-info">
+                        <div class="game-type">${game.type === 'chess' ? '♔ Шахматы' : '⚪ Шашки'}</div>
+                        <div class="game-creator">Создатель: ${game.creator}</div>
+                        <div class="game-players">Игроки: ${game.players_count}/${game.max_players}</div>
+                    </div>
+                    <button class="join-btn" onclick="joinGame('${game.id}')" ${game.players_count >= game.max_players ? 'disabled' : ''}>
+                        ${game.players_count >= game.max_players ? 'Полная' : 'Присоединиться'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Функция создания игры
+        async function createGame(gameType) {
             const status = document.getElementById('status');
             const statusText = document.getElementById('statusText');
             
             status.classList.remove('hidden');
-            statusText.textContent = `Запуск ${gameType === 'chess' ? 'шахмат' : 'шашек'}...`;
+            statusText.textContent = `Создание игры в ${gameType === 'chess' ? 'шахматы' : 'шашки'}...`;
             
-            // Показываем статус загрузки
-            setTimeout(() => {
-                statusText.textContent = 'Поиск противника...';
+            try {
+                const response = await fetch(`${API_BASE}/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        username: user.username || user.first_name || 'Player',
+                        game_type: gameType
+                    })
+                });
                 
-                // Имитация поиска противника
-                setTimeout(() => {
-                    statusText.textContent = 'Противник найден! Начинаем игру...';
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    statusText.textContent = 'Игра создана! Ожидание противника...';
+                    tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${data.game.id}`);
                     
-                    // Здесь будет логика запуска игры
+                    // Обновляем список игр
                     setTimeout(() => {
-                        tg.showAlert(`Игра ${gameType === 'chess' ? 'в шахматы' : 'в шашки'} запущена!`);
+                        refreshLobby();
                         status.classList.add('hidden');
-                    }, 1000);
-                }, 2000);
-            }, 1000);
+                    }, 2000);
+                } else {
+                    statusText.textContent = `Ошибка: ${data.error}`;
+                    setTimeout(() => status.classList.add('hidden'), 3000);
+                }
+            } catch (error) {
+                statusText.textContent = 'Ошибка подключения к серверу';
+                setTimeout(() => status.classList.add('hidden'), 3000);
+            }
         }
 
-        // Обработка нажатий на карточки игр
-        document.querySelectorAll('.game-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const gameType = this.classList.contains('chess-card') ? 'chess' : 'checkers';
-                startGame(gameType);
-            });
-        });
+        // Функция присоединения к игре
+        async function joinGame(gameId) {
+            const status = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            status.classList.remove('hidden');
+            statusText.textContent = 'Присоединение к игре...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        username: user.username || user.first_name || 'Player',
+                        game_id: gameId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    if (data.game.status === 'playing') {
+                        statusText.textContent = 'Игра начинается!';
+                        tg.showAlert('Игра начинается! Противник найден!');
+                        
+                        // Здесь будет переход к игре
+                        setTimeout(() => {
+                            status.classList.add('hidden');
+                            // window.location.href = `/game?game_id=${gameId}`;
+                        }, 2000);
+                    } else {
+                        statusText.textContent = 'Присоединились к игре! Ожидание...';
+                        tg.showAlert('Вы присоединились к игре! Ожидайте второго игрока.');
+                        
+                        setTimeout(() => {
+                            status.classList.add('hidden');
+                            refreshLobby();
+                        }, 2000);
+                    }
+                } else {
+                    statusText.textContent = `Ошибка: ${data.error}`;
+                    setTimeout(() => status.classList.add('hidden'), 3000);
+                }
+            } catch (error) {
+                statusText.textContent = 'Ошибка подключения к серверу';
+                setTimeout(() => status.classList.add('hidden'), 3000);
+            }
+        }
+
+        // Автообновление лобби каждые 10 секунд
+        setInterval(refreshLobby, 10000);
     </script>
 </body>
 </html> 
