@@ -581,10 +581,10 @@
                         statusText.textContent = 'Игра начинается!';
                         tg.showAlert('Игра начинается! Противник найден!');
                         
-                        // Здесь будет переход к игре
+                        // Переход к игре
                         setTimeout(() => {
                             status.classList.add('hidden');
-                            // window.location.href = `/game?game_id=${gameId}`;
+                            window.location.href = `/game?game_id=${gameId}&type=${data.game.type}`;
                         }, 2000);
                     } else {
                         statusText.textContent = 'Присоединились к игре! Ожидание...';

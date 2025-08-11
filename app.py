@@ -19,7 +19,9 @@ def index():
 @app.route('/game')
 def game():
     """Страница игры"""
-    return render_template('game.html')
+    game_id = request.args.get('game_id')
+    game_type = request.args.get('type', 'chess')
+    return render_template('game.html', game_id=game_id, game_type=game_type)
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
