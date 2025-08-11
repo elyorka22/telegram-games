@@ -156,6 +156,32 @@ class LobbyManager:
         print(f"DEBUG: Доступных игр: {len(available)}")
         return available
     
+    def create_user(self, user_id, username):
+        """Создать пользователя если его нет в системе"""
+        user_id = str(user_id)
+        
+        if user_id not in self.users:
+            self.users[user_id] = {
+                'username': username,
+                'current_game': None,
+                'created_at': datetime.now().isoformat()
+            }
+            save_storage()
+            print(f"DEBUG: Создан новый пользователь {user_id} ({username})")
+            return True
+        else:
+            print(f"DEBUG: Пользователь {user_id} уже существует")
+            return False
+    
+    def get_or_create_user(self, user_id, username):
+        """Получить пользователя или создать его если не существует"""
+        user_id = str(user_id)
+        
+        if user_id not in self.users:
+            return self.create_user(user_id, username)
+        
+        return self.users[user_id]
+    
     def get_game_info(self, game_id):
         """Получить информацию об игре"""
         return self.games.get(game_id)
@@ -332,6 +358,33 @@ def get_game_info(game_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/lobby/user/create', methods=['POST'])
+def create_user():
+    """Создать нового пользователя"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        username = data.get('username')
+        
+        if not user_id or not username:
+            return jsonify({'error': 'user_id и username обязательны'}), 400
+        
+        # Приводим user_id к строке
+        user_id = str(user_id)
+        
+        created = lobby_manager.create_user(user_id, username)
+        
+        return jsonify({
+            'status': 'ok',
+            'created': created,
+            'message': 'Пользователь создан' if created else 'Пользователь уже существует',
+            'user_id': user_id,
+            'username': username
+        })
+    except Exception as e:
+        print(f"DEBUG: Ошибка при создании пользователя: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/lobby/user/<user_id>', methods=['GET'])
 def get_user_game(user_id):
     """Получить информацию об игре пользователя"""
@@ -339,22 +392,53 @@ def get_user_game(user_id):
         # Приводим user_id к строке
         user_id = str(user_id)
         
+        print(f"DEBUG: Запрос информации о пользователе {user_id}")
+        print(f"DEBUG: Всего пользователей в системе: {len(lobby_manager.users)}")
+        print(f"DEBUG: Пользователи: {list(lobby_manager.users.keys())}")
+        
         user_info = lobby_manager.users.get(user_id)
         
-        if not user_info or not user_info.get('current_game'):
-            return jsonify({'error': 'У пользователя нет активной игры'}), 404
+        if not user_info:
+            print(f"DEBUG: Пользователь {user_id} не найден в системе")
+            return jsonify({
+                'status': 'not_found',
+                'message': 'Пользователь не найден в системе',
+                'user_id': user_id,
+                'has_active_game': False
+            }), 200  # Возвращаем 200 вместо 404 для лучшего UX
+        
+        if not user_info.get('current_game'):
+            print(f"DEBUG: У пользователя {user_id} нет активной игры")
+            return jsonify({
+                'status': 'no_game',
+                'message': 'У пользователя нет активной игры',
+                'user_id': user_id,
+                'username': user_info.get('username'),
+                'has_active_game': False
+            }), 200
         
         game_id = user_info['current_game']
         game_info = lobby_manager.get_game_info(game_id)
         
         if not game_info:
-            return jsonify({'error': 'Игра не найдена'}), 404
+            print(f"DEBUG: Игра {game_id} не найдена для пользователя {user_id}")
+            return jsonify({
+                'status': 'game_not_found',
+                'message': 'Игра не найдена',
+                'user_id': user_id,
+                'game_id': game_id,
+                'has_active_game': False
+            }), 200
         
+        print(f"DEBUG: Найдена активная игра {game_id} для пользователя {user_id}")
         return jsonify({
             'status': 'ok',
-            'game': game_info
+            'game': game_info,
+            'user_id': user_id,
+            'has_active_game': True
         })
     except Exception as e:
+        print(f"DEBUG: Ошибка при получении информации о пользователе {user_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/lobby/leave', methods=['POST'])

@@ -760,6 +760,10 @@
                         window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
                         return true;
                     }
+                } else if (response.status === 404) {
+                    // У пользователя нет активной игры - это нормально
+                    console.log('У пользователя нет активной игры');
+                    return false;
                 }
             } catch (error) {
                 console.error('Error checking active game:', error);
