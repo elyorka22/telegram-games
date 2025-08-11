@@ -1,5 +1,24 @@
 {
-  "dependencies": {
-    "@playwright/test": "^1.54.2"
+  "name": "telegram-games-app",
+  "version": "1.0.0",
+  "description": "Telegram Games App deployed on Vercel",
+  "main": "app.py",
+  "scripts": {
+    "dev": "python app.py",
+    "start": "python app.py",
+    "build": "echo 'No build step required for Python Flask app'",
+    "vercel-build": "echo 'Vercel build completed'"
+  },
+  "keywords": [
+    "flask",
+    "python",
+    "vercel",
+    "telegram",
+    "games"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
