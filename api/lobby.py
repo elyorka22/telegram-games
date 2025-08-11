@@ -25,6 +25,32 @@ LOBBY_STORAGE = {
     'users': {}   # {user_id: user_info}
 }
 
+# Файл для persistent storage
+STORAGE_FILE = 'lobby_data.json'
+
+def load_storage():
+    """Загрузить данные из файла"""
+    try:
+        if os.path.exists(STORAGE_FILE):
+            with open(STORAGE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                LOBBY_STORAGE['games'] = data.get('games', {})
+                LOBBY_STORAGE['users'] = data.get('users', {})
+                print(f"Загружено {len(LOBBY_STORAGE['games'])} игр и {len(LOBBY_STORAGE['users'])} пользователей")
+    except Exception as e:
+        print(f"Ошибка загрузки данных: {e}")
+
+def save_storage():
+    """Сохранить данные в файл"""
+    try:
+        with open(STORAGE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(LOBBY_STORAGE, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Ошибка сохранения данных: {e}")
+
+# Загружаем данные при запуске
+load_storage()
+
 class LobbyManager:
     def __init__(self):
         self.games = LOBBY_STORAGE['games']
@@ -58,6 +84,9 @@ class LobbyManager:
             'current_game': game_id,
             'username': username
         }
+        
+        # Сохраняем данные
+        save_storage()
         
         return game_info
     
@@ -99,6 +128,9 @@ class LobbyManager:
         if len(game['players']) == game['max_players']:
             game['status'] = 'playing'
             game['started_at'] = datetime.now().isoformat()
+        
+        # Сохраняем данные
+        save_storage()
         
         return game, "Успешно присоединились"
     
@@ -153,6 +185,9 @@ class LobbyManager:
         if user_id in self.users:
             del self.users[user_id]
         
+        # Сохраняем данные
+        save_storage()
+        
         return True, "Успешно покинули игру"
     
     def cleanup_old_games(self):
@@ -175,6 +210,7 @@ class LobbyManager:
             print(f"DEBUG: Игра {game_id} удалена")
         
         print(f"DEBUG: Очистка завершена, осталось игр: {len(self.games)}")
+        save_storage() # Добавляем сохранение после очистки
 
 # Создаем менеджер лобби
 lobby_manager = LobbyManager()

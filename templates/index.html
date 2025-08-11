@@ -485,29 +485,42 @@
 
         // Загружаем доступные игры при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
-            refreshLobby();
+            // Сначала проверяем, есть ли у пользователя активная игра
+            checkActiveGame().then(hasActiveGame => {
+                if (!hasActiveGame) {
+                    // Если нет активной игры, загружаем лобби
+                    refreshLobby();
+                }
+            });
         });
 
         // Функция обновления лобби
         async function refreshLobby() {
+            console.log('🔄 Обновление лобби...');
             const gamesList = document.getElementById('gamesList');
             
             try {
+                console.log('📡 Отправка запроса к API:', `${API_BASE}/games`);
                 const response = await fetch(`${API_BASE}/games`);
+                
+                console.log('📥 Получен ответ:', response.status, response.statusText);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
+                console.log('📋 Данные от API:', data);
                 
                 if (data.status === 'ok') {
+                    console.log(`🎮 Найдено игр: ${data.count}`);
                     displayGames(data.games);
                 } else {
+                    console.error('❌ Ошибка в ответе API:', data);
                     gamesList.innerHTML = '<div class="status"><p>Ошибка загрузки игр</p></div>';
                 }
             } catch (error) {
-                console.error('Error refreshing lobby:', error);
+                console.error('❌ Ошибка обновления лобби:', error);
                 gamesList.innerHTML = '<div class="status"><p>Ошибка подключения к серверу</p></div>';
             }
         }
@@ -537,6 +550,7 @@
 
         // Функция создания игры
         async function createGame(gameType) {
+            console.log('🎯 Создание игры:', gameType);
             const status = document.getElementById('status');
             const statusText = document.getElementById('statusText');
             
@@ -544,26 +558,35 @@
             statusText.textContent = `Создание игры в ${gameType === 'chess' ? 'шахматы' : 'шашки'}...`;
             
             try {
+                const requestData = {
+                    user_id: user.id,
+                    username: user.username || user.first_name || 'Player',
+                    game_type: gameType
+                };
+                
+                console.log('📤 Отправка данных для создания игры:', requestData);
+                
                 const response = await fetch(`${API_BASE}/create`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        user_id: user.id,
-                        username: user.username || user.first_name || 'Player',
-                        game_type: gameType
-                    })
+                    body: JSON.stringify(requestData)
                 });
+                
+                console.log('📥 Ответ на создание игры:', response.status, response.statusText);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
+                console.log('📋 Данные созданной игры:', data);
                 
                 if (data.status === 'ok') {
                     statusText.textContent = 'Игра создана! Ожидание противника...';
+                    console.log('✅ Игра создана успешно, ID:', data.game.id);
+                    
                     tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${data.game.id}`);
                     
                     // Показываем уведомление о том, что нужно ждать второго игрока
@@ -571,17 +594,27 @@
                         tg.showAlert('Ожидайте присоединения второго игрока. Вы будете автоматически перенаправлены к игре.');
                     }, 2000);
                     
+                    // Начинаем проверять активную игру каждые 5 секунд
+                    const checkInterval = setInterval(async () => {
+                        const hasActiveGame = await checkActiveGame();
+                        if (hasActiveGame) {
+                            clearInterval(checkInterval);
+                            status.classList.add('hidden');
+                        }
+                    }, 5000);
+                    
                     // Обновляем список игр
                     setTimeout(() => {
                         refreshLobby();
                         status.classList.add('hidden');
                     }, 2000);
                 } else {
+                    console.error('❌ Ошибка создания игры:', data.error);
                     statusText.textContent = `Ошибка: ${data.error}`;
                     setTimeout(() => status.classList.add('hidden'), 3000);
                 }
             } catch (error) {
-                console.error('Error creating game:', error);
+                console.error('❌ Ошибка создания игры:', error);
                 statusText.textContent = 'Ошибка подключения к серверу';
                 setTimeout(() => status.classList.add('hidden'), 3000);
             }
@@ -700,6 +733,29 @@
                 console.error('Error checking game:', error);
                 tg.showAlert('Ошибка при проверке игры');
             }
+        }
+
+        // Функция автоматической проверки активной игры
+        async function checkActiveGame() {
+            const user = tg?.initDataUnsafe?.user || {
+                id: Math.floor(Math.random() * 1000000),
+                username: 'Player' + Math.floor(Math.random() * 1000)
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/user/${user.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'ok' && data.game && data.game.status === 'playing') {
+                        console.log('Найдена активная игра, перенаправляем...');
+                        window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking active game:', error);
+            }
+            return false;
         }
 
         // Автообновление лобби каждые 10 секунд

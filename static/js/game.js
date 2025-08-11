@@ -177,7 +177,13 @@ function initializeSocket() {
     // Подключаемся к WebSocket серверу игр
     console.log('Попытка подключения к WebSocket...');
     try {
-        socket = io('http://localhost:5002');
+        // Используем правильный URL для production
+        const wsUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5002' 
+            : window.location.origin.replace('https://', 'wss://').replace('http://', 'ws://');
+        
+        console.log('WebSocket URL:', wsUrl);
+        socket = io(wsUrl);
         
         socket.on('connect', function() {
             console.log('Подключен к серверу игры');
