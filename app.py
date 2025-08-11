@@ -1,7 +1,15 @@
 from flask import Flask, jsonify, render_template, send_from_directory
 import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
 
 app = Flask(__name__)
+
+# Конфигурация
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
+WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://your-app-name.vercel.app')
 
 @app.route('/')
 def index():
@@ -12,7 +20,8 @@ def index():
         return jsonify({
             'message': 'Telegram Games App is running on Vercel!',
             'status': 'ok',
-            'platform': 'vercel'
+            'platform': 'vercel',
+            'bot_token_configured': bool(BOT_TOKEN and BOT_TOKEN != 'YOUR_BOT_TOKEN_HERE')
         })
 
 @app.route('/game')
@@ -37,7 +46,8 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'message': 'Application is running on Vercel',
-        'platform': 'vercel'
+        'platform': 'vercel',
+        'bot_configured': bool(BOT_TOKEN and BOT_TOKEN != 'YOUR_BOT_TOKEN_HERE')
     }), 200
 
 @app.route('/test')
@@ -56,7 +66,9 @@ def api_status():
         'status': 'running',
         'environment': os.getenv('VERCEL_ENV', 'development'),
         'region': os.getenv('VERCEL_REGION', 'unknown'),
-        'platform': 'vercel'
+        'platform': 'vercel',
+        'bot_token_configured': bool(BOT_TOKEN and BOT_TOKEN != 'YOUR_BOT_TOKEN_HERE'),
+        'webapp_url': WEBAPP_URL
     })
 
 @app.route('/api/health')
@@ -76,6 +88,15 @@ def api_test():
         'status': 'ok',
         'platform': 'vercel'
     }), 200
+
+@app.route('/api/bot/status')
+def bot_status():
+    """Bot status endpoint"""
+    return jsonify({
+        'bot_configured': bool(BOT_TOKEN and BOT_TOKEN != 'YOUR_BOT_TOKEN_HERE'),
+        'webapp_url': WEBAPP_URL,
+        'platform': 'vercel'
+    })
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
@@ -107,4 +128,6 @@ if __name__ == '__main__':
     
     print(f"Starting app on {host}:{port}")
     print(f"PORT environment variable: {os.getenv('PORT')}")
+    print(f"Bot token configured: {bool(BOT_TOKEN and BOT_TOKEN != 'YOUR_BOT_TOKEN_HERE')}")
+    print(f"WebApp URL: {WEBAPP_URL}")
     app.run(debug=False, host=host, port=port) 
