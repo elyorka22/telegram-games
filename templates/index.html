@@ -363,7 +363,7 @@
                 <h2>Создать новую игру</h2>
                 
                 <div class="games-grid">
-                    <div class="game-card chess-card" onclick="createGame('chess')">
+                    <div class="game-card chess-card" onclick="createGameSimple('chess')">
                         <div class="game-icon">♔♛</div>
                         <h3>Шахматы</h3>
                         <p>Классическая игра стратегии и тактики</p>
@@ -378,7 +378,7 @@
                         </button>
                     </div>
                     
-                    <div class="game-card checkers-card" onclick="createGame('checkers')">
+                    <div class="game-card checkers-card" onclick="createGameSimple('checkers')">
                         <div class="game-icon">⚪⚫</div>
                         <h3>Шашки</h3>
                         <p>Быстрая и динамичная игра</p>
@@ -554,9 +554,9 @@
             `).join('');
         }
 
-        // Функция создания игры
-        async function createGame(gameType) {
-            console.log('🎯 Создание игры:', gameType);
+        // Функция создания игры (упрощенная версия)
+        async function createGameSimple(gameType) {
+            console.log('🎯 Создание игры (упрощенная версия):', gameType);
             const status = document.getElementById('status');
             const statusText = document.getElementById('statusText');
             
@@ -590,16 +590,13 @@
                 console.log('📋 Данные созданной игры:', data);
                 
                 if (data.status === 'ok') {
-                    statusText.textContent = 'Игра создана! Ожидание противника...';
-                    console.log('✅ Игра создана успешно, ID:', data.game.id);
-                    
-                    // Безопасное преобразование в строку
                     const gameId = String(data.game.id || 'неизвестно');
-                    tg.showAlert(`Игра в ${gameType === 'chess' ? 'шахматы' : 'шашки'} создана! ID: ${gameId}`);
+                    statusText.textContent = `✅ Игра создана! ID: ${gameId}. Ожидание противника...`;
+                    console.log('✅ Игра создана успешно, ID:', gameId);
                     
-                    // Показываем уведомление о том, что нужно ждать второго игрока
+                    // Показываем информацию о созданной игре
                     setTimeout(() => {
-                        tg.showAlert('Ожидайте присоединения второго игрока. Вы будете автоматически перенаправлены к игре.');
+                        statusText.textContent = `Игра создана! ID: ${gameId}. Ожидайте присоединения второго игрока.`;
                     }, 2000);
                     
                     // Начинаем проверять активную игру каждые 5 секунд
@@ -729,7 +726,11 @@
                             tg.showAlert('Игра началась! Переходим к игре...');
                             window.location.href = `/game?game_id=${data.game.id}&type=${data.game.type}`;
                         } else {
-                            tg.showAlert(`Ваша игра: ${data.game.status}. Игроков: ${data.game.players.length}/${data.game.max_players}`);
+                            // Безопасное преобразование в строки
+                            const gameStatus = String(data.game.status || 'неизвестно');
+                            const playersCount = String(data.game.players?.length || 0);
+                            const maxPlayers = String(data.game.max_players || 2);
+                            tg.showAlert(`Ваша игра: ${gameStatus}. Игроков: ${playersCount}/${maxPlayers}`);
                         }
                     } else {
                         tg.showAlert('У вас нет активной игры');

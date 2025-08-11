@@ -33,6 +33,7 @@ class TelegramGameBot:
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("games", self.games_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
+        self.application.add_handler(CommandHandler("join", self.join_game_command))
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
         
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -82,13 +83,13 @@ class TelegramGameBot:
    • Дамки
    • Множественные взятия
 
-Нажмите кнопку ниже, чтобы открыть игровую платформу!
+Выберите тип игры или нажмите кнопку для открытия игровой платформы!
         """
         
         keyboard = [
-            [InlineKeyboardButton("♔ Шахматы", web_app=WebAppInfo(url=f"{WEBAPP_URL}?game=chess"))],
-            [InlineKeyboardButton("⚪ Шашки", web_app=WebAppInfo(url=f"{WEBAPP_URL}?game=checkers"))],
-            [InlineKeyboardButton("🎮 Все игры", web_app=WebAppInfo(url=f"{WEBAPP_URL}"))]
+            [InlineKeyboardButton("♔ Создать шахматы", callback_data="create_chess")],
+            [InlineKeyboardButton("⚪ Создать шашки", callback_data="create_checkers")],
+            [InlineKeyboardButton("🎮 Открыть платформу", web_app=WebAppInfo(url=f"{WEBAPP_URL}"))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -149,11 +150,143 @@ class TelegramGameBot:
         query = update.callback_query
         await query.answer()
         
+        # Обработка создания игр
+        if query.data == "create_chess":
+            await self.create_game_direct(update, context, "chess")
+        elif query.data == "create_checkers":
+            await self.create_game_direct(update, context, "checkers")
         # Обработка данных от Mini App
-        if query.data and query.data.startswith('web_app_data'):
+        elif query.data and query.data.startswith('web_app_data'):
             # Здесь можно обработать данные, отправленные из Mini App
             await query.edit_message_text("Данные получены от игры!")
+    
+    async def create_game_direct(self, update: Update, context: ContextTypes.DEFAULT_TYPE, game_type: str):
+        """Создание игры прямо в боте"""
+        user = update.effective_user
+        
+        try:
+            # Создаем игру через API
+            import requests
+            import json
             
+            game_data = {
+                'user_id': str(user.id),
+                'username': user.username or user.first_name or 'Player',
+                'game_type': game_type
+            }
+            
+            response = requests.post(
+                f"{WEBAPP_URL}/api/lobby/create",
+                headers={'Content-Type': 'application/json'},
+                json=game_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data['status'] == 'ok':
+                    game_id = data['game']['id']
+                    game_name = "шахматы" if game_type == "chess" else "шашки"
+                    
+                    # Создаем кнопку для присоединения к игре
+                    keyboard = [
+                        [InlineKeyboardButton("🎮 Присоединиться к игре", web_app=WebAppInfo(url=f"{WEBAPP_URL}/game?game_id={game_id}&type={game_type}"))],
+                        [InlineKeyboardButton("📋 Поделиться ссылкой", callback_data=f"share_game_{game_id}")]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    await query.edit_message_text(
+                        f"✅ Игра в {game_name} создана!\n\n"
+                        f"🆔 ID игры: <code>{game_id}</code>\n"
+                        f"👤 Создатель: {user.first_name}\n"
+                        f"⏳ Статус: Ожидание игрока\n\n"
+                        f"Отправьте ID игры другу или нажмите кнопку для присоединения!",
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
+                else:
+                    await query.edit_message_text(f"❌ Ошибка создания игры: {data.get('error', 'Неизвестная ошибка')}")
+            else:
+                await query.edit_message_text("❌ Ошибка подключения к серверу")
+                
+        except Exception as e:
+            await query.edit_message_text(f"❌ Ошибка: {str(e)}")
+    
+    async def join_game_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Присоединение к игре по ID"""
+        user = update.effective_user
+        
+        # Проверяем, есть ли ID игры в команде
+        if not context.args:
+            await update.message.reply_text(
+                "🎮 <b>Присоединение к игре</b>\n\n"
+                "Использование: <code>/join GAME_ID</code>\n\n"
+                "Пример: <code>/join abc12345</code>\n\n"
+                "Получите ID игры от друга, который создал игру!",
+                parse_mode='HTML'
+            )
+            return
+        
+        game_id = context.args[0]
+        
+        try:
+            # Присоединяемся к игре через API
+            import requests
+            
+            join_data = {
+                'user_id': str(user.id),
+                'username': user.username or user.first_name or 'Player',
+                'game_id': game_id
+            }
+            
+            response = requests.post(
+                f"{WEBAPP_URL}/api/lobby/join",
+                headers={'Content-Type': 'application/json'},
+                json=join_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data['status'] == 'ok':
+                    game_type = data['game']['type']
+                    game_name = "шахматы" if game_type == "chess" else "шашки"
+                    
+                    if data['game']['status'] == 'playing':
+                        # Игра готова к началу
+                        keyboard = [
+                            [InlineKeyboardButton("🎮 Начать игру!", web_app=WebAppInfo(url=f"{WEBAPP_URL}/game?game_id={game_id}&type={game_type}"))]
+                        ]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        await update.message.reply_text(
+                            f"🎉 <b>Игра начинается!</b>\n\n"
+                            f"🎮 Тип: {game_name}\n"
+                            f"🆔 ID: <code>{game_id}</code>\n"
+                            f"👥 Игроков: {len(data['game']['players'])}/2\n\n"
+                            f"Нажмите кнопку, чтобы начать играть!",
+                            reply_markup=reply_markup,
+                            parse_mode='HTML'
+                        )
+                    else:
+                        # Ожидание второго игрока
+                        await update.message.reply_text(
+                            f"✅ <b>Присоединились к игре!</b>\n\n"
+                            f"🎮 Тип: {game_name}\n"
+                            f"🆔 ID: <code>{game_id}</code>\n"
+                            f"👥 Игроков: {len(data['game']['players'])}/2\n"
+                            f"⏳ Статус: Ожидание второго игрока\n\n"
+                            f"Вы будете уведомлены, когда игра начнется!",
+                            parse_mode='HTML'
+                        )
+                else:
+                    await update.message.reply_text(f"❌ Ошибка: {data.get('error', 'Неизвестная ошибка')}")
+            else:
+                await update.message.reply_text("❌ Ошибка подключения к серверу")
+                
+        except Exception as e:
+            await update.message.reply_text(f"❌ Ошибка: {str(e)}")
+        
     def run(self):
         """Запуск бота"""
         logger.info("Запуск Telegram бота...")
